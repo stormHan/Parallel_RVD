@@ -26,3 +26,7 @@
 *.exe
 *.out
 *.app
+
+#Others
+*.suo
+*.filters
