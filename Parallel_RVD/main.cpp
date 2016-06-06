@@ -8,6 +8,7 @@
 #include "Command_line.h"
 #include "Mesh_io.h"
 #include "Mesh.h"
+#include "Mesh_repair.h"
 
 
 int main(int argc, char** argv)
@@ -32,11 +33,20 @@ int main(int argc, char** argv)
 	Mesh M_in, M_out, points_in;
 	FileType mesh_type = OBJfile;
 	
-	if (!mesh_load(filenames[0], M_in))
+	if (!mesh_load(mesh_filename, M_in))
 	{
-		fprintf(stderr, "cannot load Mesh!");
+		fprintf(stderr, "cannot load Mesh into M_in!");
 		return -1;
 	}
+
+	if (!mesh_load(points_filename, points_in, false))
+	{
+		fprintf(stderr, "cannot load points into points_in!");
+		return -1; 
+	}
+
+	mesh_repair(M_in);
+
 
 	return 0;
 }
