@@ -21,7 +21,13 @@ namespace P_RVD
 		PTXfile = 1
 	};
 
-	bool mesh_load(const std::string _filepath, Mesh& _M, FileType _filetype = OBJfile);
+	/*
+		load the mesh attributes from the file
+
+		meshpoints : true	-- load a mesh
+					 flase	-- load points, just vertices
+	*/
+	bool mesh_load(const std::string _filepath, Mesh& _M, bool _meshpoints = true, FileType _filetype = OBJfile);
 }
 
 #endif /* H_MESH_IO_H */
