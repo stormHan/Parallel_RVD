@@ -23,8 +23,29 @@
 
 namespace P_RVD
 {
-	class Mesh;
+	class Line
+	{
+	public:
+		Line(t_index _begin, t_index _end);
 
+	private:
+		t_index m_begin;
+		t_index m_end;
+	};
+
+	class Facet
+	{
+	public:
+		Facet(t_index _v1, t_index _v2, t_index _v3);
+
+	private:
+		t_index m_v1;
+		t_index m_v2;
+		t_index m_v3;
+	};
+
+	class Mesh;
+	/*----------------- Mesh Vertices ------------------*/
 	class MeshVertices
 	{
 	public:
@@ -51,15 +72,29 @@ namespace P_RVD
 	{
 	public:
 		MeshEdges(Mesh& _mesh);
+
+	private:
+		std::vector<Line> m_Edges;
 	};
 
 	class MeshFacets
 	{
 	public:
 		MeshFacets(Mesh& _mesh);
+
+		/*
+			add a Facet to m_Facets
+		*/
+		void addFacet(const Facet _f);
+
+		/*
+			add a Facet via three indice of m_Vertices
+		*/
+		void addFacet(t_index _v1, t_index _v2, t_index _v3);
 		
 	private:
-
+		std::vector<Facet> m_Facets;
+		unsigned int m_nb;
 	};
 
 
