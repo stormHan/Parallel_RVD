@@ -3,7 +3,7 @@
 	Parallel compute the Restricted Voronoi Diagram
 
 
-*/
+	*/
 
 #include "Command_line.h"
 #include "Mesh_io.h"
@@ -21,7 +21,7 @@ int main(int argc, char** argv)
 		fprintf(stderr, "cannot parse the argument into filenames!");
 		return -1;
 	}
-	
+
 	std::string mesh_filename = filenames[0];
 	std::string points_filename = filenames[0];
 	std::string output_filename;
@@ -32,7 +32,7 @@ int main(int argc, char** argv)
 
 	Mesh M_in, M_out, points_in;
 	FileType mesh_type = OBJfile;
-	
+
 	if (!mesh_load(mesh_filename, M_in))
 	{
 		fprintf(stderr, "cannot load Mesh into M_in!");
@@ -42,11 +42,10 @@ int main(int argc, char** argv)
 	if (!mesh_load(points_filename, points_in, false))
 	{
 		fprintf(stderr, "cannot load points into points_in!");
-		return -1; 
+		return -1;
 	}
 
 	mesh_repair(M_in);
-
 
 	return 0;
 }
