@@ -28,6 +28,12 @@ namespace P_RVD
 					 flase	-- load points, just vertices
 	*/
 	bool mesh_load(const std::string _filepath, Mesh& _M, bool _meshpoints = true, FileType _filetype = OBJfile);
+
+	/*
+		save the mesh.
+	*/
+
+	
 }
 
 #endif /* H_MESH_IO_H */

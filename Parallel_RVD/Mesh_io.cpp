@@ -22,8 +22,8 @@ namespace P_RVD
 
 			if (strcmp(lineHeader, "v") == 0)
 			{
-				Vector3f vertex;
-				fscanf(file, "%f %f %f", &vertex.x, &vertex.y, &vertex.z);
+				Vector3d vertex;
+				fscanf(file, "%lf %lf %lf", &vertex.x, &vertex.y, &vertex.z);
 				_M.meshVertices.addPoint(vertex);
 			}
 
@@ -66,4 +66,6 @@ namespace P_RVD
 
 		return true;
 	}
+
+	
 }
