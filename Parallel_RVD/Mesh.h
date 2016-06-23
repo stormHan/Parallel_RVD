@@ -38,7 +38,6 @@ namespace P_RVD
 	public:
 		Facet(t_index _v1, t_index _v2, t_index _v3);
 
-	private:
 		t_index m_v1;
 		t_index m_v2;
 		t_index m_v3;
@@ -49,6 +48,9 @@ namespace P_RVD
 	class MeshVertices
 	{
 	public:
+
+		friend class Points;
+
 		MeshVertices(Mesh& _mesh);
 		
 
@@ -56,16 +58,17 @@ namespace P_RVD
 			get Point Position via indice
 		*/
 		
-		Vector3f getPoint(t_index _nb);
+		Vector3d getPoint(t_index _nb);
 		
 		/*
 			add a Point to m_Vertices
 		*/
-		void addPoint(Vector3f _newpoint);
+		void addPoint(Vector3d _newpoint);
 
 	private:
-		std::vector<Vector3f> m_Vertices;
+		std::vector<Vector3d> m_Vertices;
 		unsigned int m_nb = 0;
+
 	};
 
 	class MeshEdges
@@ -92,6 +95,16 @@ namespace P_RVD
 		*/
 		void addFacet(t_index _v1, t_index _v2, t_index _v3);
 		
+		/*
+			get the Facet infomation via index
+		*/
+		Facet getFacet(t_index _t);
+
+		/*
+			get the number of facets
+		*/
+		unsigned int getFacetsNumber(){ return m_nb; }
+
 	private:
 		std::vector<Facet> m_Facets;
 		unsigned int m_nb;
@@ -109,7 +122,6 @@ namespace P_RVD
 		
 		Mesh();
 	private:
-
 	};
 
 }

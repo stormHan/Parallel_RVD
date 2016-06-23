@@ -20,12 +20,12 @@ namespace P_RVD
 
 	/*----------------- Mesh Vertices ------------------*/
 
-	Vector3f MeshVertices::getPoint(t_index _nb)
+	Vector3d MeshVertices::getPoint(t_index _nb)
 	{
 		return m_Vertices[_nb];
 	}
 
-	void MeshVertices::addPoint(Vector3f _newpoint)
+	void MeshVertices::addPoint(Vector3d _newpoint)
 	{
 		m_nb++;
 		m_Vertices.push_back(_newpoint);
@@ -44,7 +44,7 @@ namespace P_RVD
 		m_Edges = _mesh.meshEdges.m_Edges;
 	}
 
-	/*----------------- Mesh Edges --------------------*/
+	/*----------------- Mesh Facets -------------------*/
 
 	MeshFacets::MeshFacets(Mesh& _mesh)
 	{
@@ -62,6 +62,11 @@ namespace P_RVD
 	{
 		m_nb++;
 		m_Facets.push_back(Facet(_v1, _v2, _v3));
+	}
+
+	Facet MeshFacets::getFacet(t_index _t)
+	{
+		return m_Facets[_t];
 	}
 	/*--------------------- Mesh ----------------------*/
 	Mesh::Mesh()
