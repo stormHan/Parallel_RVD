@@ -49,6 +49,12 @@ namespace P_RVD
 
 		Vector3d current_center;
 		std::vector<int> current_near_points;
+
+		t_index face_begin;
+		t_index face_end;
+
+		unsigned int seeds_n;
+		t_index current_seed;
 	};
 }
 

@@ -7,6 +7,8 @@ namespace P_RVD
 	{
 		p_Mesh = _M;
 		p_Points = _P;
+
+		seeds_n = 5;
 	}
 
 	Vector3d RestrictedVoronoiDiagram::computeCenter(const Vector3i index_triangle)
@@ -50,10 +52,24 @@ namespace P_RVD
 
 	bool RestrictedVoronoiDiagram::compute_RVD()
 	{
-		Facet temp_facet = p_Mesh->meshFacets.getFacet(0);
-		current_center = computeCenter(temp_facet.m_v1, temp_facet.m_v2, temp_facet.m_v3);
+		face_begin = 0;
+		face_end = p_Mesh->meshFacets.getFacetsNumber();
 
-		current_near_points = findNearestPoints(current_center, 3);
+		/*
+			compute the RVD of each facet and each seed
+		*/
+		for (t_index t = face_begin; t < face_end; ++t)
+		{
+			Facet temp_facet = p_Mesh->meshFacets.getFacet(t);
+			current_center = computeCenter(temp_facet.m_v1, temp_facet.m_v2, temp_facet.m_v3);
+
+			current_near_points = findNearestPoints(current_center, seeds_n);
+
+			for (t_index i = 0; i < seeds_n; ++i)
+			{
+				current_seed = current_near_points[i];
+			}
+		}
 		return true;
 	}
 }
