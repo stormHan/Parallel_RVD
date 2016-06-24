@@ -68,6 +68,7 @@ namespace P_RVD
 			for (t_index i = 0; i < seeds_n; ++i)
 			{
 				current_seed = current_near_points[i];
+				
 			}
 		}
 		return true;

@@ -11,6 +11,7 @@
 
 #include "Mesh.h"
 #include "Points.h"
+#include "Polygon.h"
 
 #include "Math_basics.h"
 
