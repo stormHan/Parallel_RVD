@@ -64,7 +64,7 @@ namespace P_RVD
 		m_Facets.push_back(Facet(_v1, _v2, _v3));
 	}
 
-	Facet MeshFacets::getFacet(t_index _t)
+	Facet MeshFacets::getFacet(t_index _t) const
 	{
 		return m_Facets[_t];
 	}

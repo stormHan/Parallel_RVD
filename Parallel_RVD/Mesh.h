@@ -98,7 +98,7 @@ namespace P_RVD
 		/*
 			get the Facet infomation via index
 		*/
-		Facet getFacet(t_index _t);
+		Facet getFacet(t_index _t) const;
 
 		/*
 			get the number of facets
