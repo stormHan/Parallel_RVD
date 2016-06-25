@@ -200,7 +200,47 @@ struct Vector4f
 	}
 };
 
+struct Vector3d
+{
+	double x;
+	double y;
+	double z;
 
+	Vector3d()
+	{
+
+	}
+
+	Vector3d(double _x, double _y, double _z)
+	{
+		x = _x;
+		y = _y;
+		z = _z;
+	}
+
+	Vector3d(double f)
+	{
+		x = y = z = f;
+	}
+
+	Vector3d& operator+=(const Vector3d& r)
+	{
+		x += r.x;
+		y += r.y;
+		z += r.z;
+
+		return *this;
+	}
+
+	Vector3d& operator-=(const Vector3d& r)
+	{
+		x -= r.x;
+		y -= r.y;
+		z -= r.z;
+
+		return *this;
+	}
+};
 
 struct Quaternion
 {
