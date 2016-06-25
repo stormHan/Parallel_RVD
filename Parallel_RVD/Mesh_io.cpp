@@ -60,7 +60,7 @@ namespace P_RVD
 				{
 					int matched = fscanf(file, "%d %d %d", &t_vIndex.x, &t_vIndex.y, &t_vIndex.z);
 				}
-				_M.meshFacets.addFacet((t_index)t_vIndex.x, (t_index)t_vIndex.y, (t_index)t_vIndex.z);
+				_M.meshFacets.addFacet((t_index)t_vIndex.x - 1, (t_index)t_vIndex.y - 1, (t_index)t_vIndex.z - 1);
 			}
 		}
 
