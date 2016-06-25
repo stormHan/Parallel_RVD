@@ -19,6 +19,11 @@ namespace P_RVD
 		*/
 		Points(const Mesh& _M);
 
+		/*
+			get the exact position of the Seed via index
+		*/
+		const Vector3d getPoint(t_index _t){ return m_points[_t];}
+
 	protected:
 		std::vector<Vector3d> m_points;
 		int points_nb;
