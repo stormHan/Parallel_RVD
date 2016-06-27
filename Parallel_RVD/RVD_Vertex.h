@@ -7,6 +7,7 @@
 #define H_RVD_VERTEX_H
 
 #include "Common.h"
+#include "math_3d.h"
 
 namespace P_RVD
 {
@@ -91,7 +92,7 @@ namespace P_RVD
 		/*
 			get the position of this vertex
 		*/
-		const Vector3d getPosition()
+		const Vector3d getPosition() const
 		{
 			return m_position;
 		}
