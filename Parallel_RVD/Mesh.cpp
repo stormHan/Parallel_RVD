@@ -20,7 +20,7 @@ namespace P_RVD
 
 	/*----------------- Mesh Vertices ------------------*/
 
-	Vector3d MeshVertices::getPoint(t_index _nb)
+	Vector3d MeshVertices::getPoint(t_index _nb) const
 	{
 		return m_Vertices[_nb];
 	}

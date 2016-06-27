@@ -58,7 +58,7 @@ namespace P_RVD
 			get Point Position via indice
 		*/
 		
-		Vector3d getPoint(t_index _nb);
+		Vector3d getPoint(t_index _nb) const;
 		
 		/*
 			add a Point to m_Vertices
