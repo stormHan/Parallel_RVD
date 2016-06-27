@@ -13,9 +13,9 @@ namespace P_RVD
 
 	Vector3d RestrictedVoronoiDiagram::computeCenter(const Vector3i index_triangle)
 	{
-		Vector3d p1 = p_Mesh->meshVertices.getPoint(index_triangle.x - 1);
-		Vector3d p2 = p_Mesh->meshVertices.getPoint(index_triangle.y - 1);
-		Vector3d p3 = p_Mesh->meshVertices.getPoint(index_triangle.z - 1);
+		Vector3d p1 = p_Mesh->meshVertices.getPoint(index_triangle.x);
+		Vector3d p2 = p_Mesh->meshVertices.getPoint(index_triangle.y);
+		Vector3d p3 = p_Mesh->meshVertices.getPoint(index_triangle.z);
 
 		return Math::computeCenter(p1, p2, p3);
 	}
@@ -34,11 +34,12 @@ namespace P_RVD
 		for (int i = 0; i < p_Points->points_nb; ++i)
 		{
 			t = Math::computeDistance(p_Points->m_points[i], _center);
-			temp_dis.push_back(t);
 
 			while (dis_index_map.count(t) != 0)
 				t += 0.00000000001;
 			dis_index_map.insert(std::pair<double, t_index>(t, i));
+
+			temp_dis.push_back(t);
 		}
 		
 		std::sort(temp_dis.begin(), temp_dis.end());
@@ -55,6 +56,7 @@ namespace P_RVD
 		face_begin = 0;
 		face_end = p_Mesh->meshFacets.getFacetsNumber();
 
+		Polygon F;
 		/*
 			compute the RVD of each facet and each seed
 		*/
@@ -68,9 +70,53 @@ namespace P_RVD
 			for (t_index i = 0; i < seeds_n; ++i)
 			{
 				current_seed = current_near_points[i];
+
+				F.initialize_from_mesh_facet(p_Mesh, t);
 				
+				/*
+					compute the intersection between a cell and a facet
+				*/
+				intersect_cell_facet(current_seed, F);
 			}
 		}
 		return true;
+	}
+
+	Polygon* RestrictedVoronoiDiagram::intersect_cell_facet(t_index seed, Polygon& F)
+	{
+		Vector3d temp_seed_position = p_Points->getPoint(seed);
+		seed_neighbors = findNearestPoints(temp_seed_position, seeds_n);
+
+		Polygon* ping = &F;
+		Polygon* pong = &polygon_buffer;
+
+		for (int i = 0; i < seeds_n; ++i)
+		{
+			int j = seed_neighbors[i];
+
+			clip_by_plane(*ping, *pong, seed, (t_index)j);
+			//swap ping and pong
+			swap_polygons(ping, pong);
+		}
+		return &F;
+	}
+
+	void RestrictedVoronoiDiagram::swap_polygons(Polygon*& ping, Polygon*& pong)
+	{
+		if (ping != &empty_polygon && ping != &polygon_buffer) {
+			// First clipping operation, ping points to F
+			// (current facet copied)
+			ping = &polygon_buffer;
+			pong = &empty_polygon;
+		}
+		else {
+			P_RVD::geo_swap(ping, pong);
+		}
+	}
+
+	void RestrictedVoronoiDiagram::clip_by_plane(Polygon& ping, Polygon& pong, t_index i, t_index j)
+	{
+		// pong is the result of ping
+		ping.clip_by_plane(pong, *p_Points, i, j);
 	}
 }

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <map>
 
+#include "Common.h"
 #include "Mesh.h"
 #include "Points.h"
 #include "Polygon.h"
@@ -44,6 +45,23 @@ namespace P_RVD
 		*/
 		std::vector<int> findNearestPoints(const Vector3d _center, int _n);
 
+		/*
+			Compute the intersection between the Voronoi Cell of a  seed and a facet.
+		*/
+		Polygon* intersect_cell_facet(t_index seed, Polygon& F);
+
+		/*
+			a polygon clipped by a plane.
+			a plane (bisector) is defined by 2 point i and j.
+
+		*/
+		void clip_by_plane(Polygon& ping, Polygon& pong, t_index i, t_index j);
+
+		/*
+			Swap two pointers between two polygons
+		*/
+		void swap_polygons(Polygon*& ping, Polygon*& pong);
+
 	private:
 		Mesh* p_Mesh;
 		Points* p_Points;
@@ -56,6 +74,20 @@ namespace P_RVD
 
 		unsigned int seeds_n;
 		t_index current_seed;
+
+		Polygon* current_polygon;
+		/*
+			as a buffer the store the result after clipping
+		*/
+		Polygon polygon_buffer;
+		/*
+			empty polygon
+		*/
+		Polygon empty_polygon;
+		/*
+			the neighbors betweent a seed
+		*/
+		std::vector<int> seed_neighbors;
 	};
 }
 
