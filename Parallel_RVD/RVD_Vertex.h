@@ -108,7 +108,7 @@ namespace P_RVD
 		/*
 			get the weight of this vertex
 		*/
-		double getWeight(){ return m_weight; }
+		double getWeight() const { return m_weight; }
 
 		/*
 			set the value of the weight of the vertex
@@ -121,7 +121,7 @@ namespace P_RVD
 		/*
 			get the relative seed index
 		*/
-		signed_t_index getSeed(){ return m_seed; }
+		signed_t_index getSeed() const { return m_seed; }
 
 		/*
 			set the relative seed
@@ -134,7 +134,7 @@ namespace P_RVD
 		/*
 			get the relative facet
 		*/
-		signed_t_index getFacet(){ return m_facet; }
+		signed_t_index getFacet() const { return m_facet; }
 
 		/*
 			set the relative facet
@@ -160,7 +160,7 @@ namespace P_RVD
 		/*
 			get the edge type
 		*/
-		EdgeType getEdgeType(){ return m_edge_type; }
+		EdgeType getEdgeType() const { return m_edge_type; }
 
 		/*
 			set the type of edge
@@ -182,6 +182,16 @@ namespace P_RVD
 				return false;
 			return true;
 		}
+
+		/*
+			Copy adjacent facet and edge edgetype from another Vertex
+		*/
+		void copy_edge_from(const Vertex& _v)
+		{
+			setFacet(_v.getFacet());
+			m_edge_type = _v.getEdgeType();
+		}
+
 	protected:
 		VertexType m_vertex_type;
 		EdgeType m_edge_type;
