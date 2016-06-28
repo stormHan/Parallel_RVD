@@ -223,7 +223,7 @@ struct Vector3d
 		x = y = z = f;
 	}
 
-	Vector3d& operator+=(const Vector3d& r)
+	Vector3d& operator+=(Vector3d& r)
 	{
 		x += r.x;
 		y += r.y;
@@ -237,6 +237,15 @@ struct Vector3d
 		x -= r.x;
 		y -= r.y;
 		z -= r.z;
+
+		return *this;
+	}
+
+	Vector3d& operator =(const Vector3d& r)
+	{
+		x = r.x;
+		y = r.y;
+		z = r.z;
 
 		return *this;
 	}
