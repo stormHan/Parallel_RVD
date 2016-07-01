@@ -84,7 +84,6 @@ namespace P_RVD
 				Vertex I;
 				Vector3d temp_position;
 
-
 				//compute the position and weight
 				double denom = 2.0 * (prev_l - l);
 				double lambda1, lambda2;
