@@ -76,7 +76,9 @@ namespace P_RVD
 				/*
 					compute the intersection between a cell and a facet
 				*/
-				intersect_cell_facet(current_seed, F);
+				current_polygon = intersect_cell_facet(current_seed, F);
+
+				//muniplate the current polygon 
 			}
 		}
 		return true;
@@ -98,7 +100,9 @@ namespace P_RVD
 			//swap ping and pong
 			swap_polygons(ping, pong);
 		}
-		return &F;
+		//swap the ping polygon and pong polygon
+		//the result must be stored in the ping polygons
+		return ping;
 	}
 
 	void RestrictedVoronoiDiagram::swap_polygons(Polygon*& ping, Polygon*& pong)
