@@ -2,14 +2,15 @@
 
 	Parallel compute the Restricted Voronoi Diagram
 
-
-	*/
+*/
 
 #include "Command_line.h"
 #include "Mesh_io.h"
 #include "Mesh.h"
+#include "Points.h"
 #include "Mesh_repair.h"
 
+#include "RVD.h"
 
 int main(int argc, char** argv)
 {
@@ -46,6 +47,13 @@ int main(int argc, char** argv)
 	}
 
 	mesh_repair(M_in);
+	Points points(points_in);
+
+	/*
+		ÉèÖÃKdtree
+	*/
+	RestrictedVoronoiDiagram *m_RVD = new RestrictedVoronoiDiagram(&M_in, &points);
+	m_RVD->compute_RVD();
 
 	return 0;
 }
