@@ -208,7 +208,9 @@ struct Vector3d
 
 	Vector3d()
 	{
-
+		x = 0.000000000000;
+		y = 0.000000000000;
+		z = 0.000000000000;
 	}
 
 	Vector3d(double _x, double _y, double _z)
@@ -223,7 +225,7 @@ struct Vector3d
 		x = y = z = f;
 	}
 
-	Vector3d& operator+=(Vector3d& r)
+	Vector3d& operator +=(Vector3d& r)
 	{
 		x += r.x;
 		y += r.y;
@@ -247,6 +249,23 @@ struct Vector3d
 		y = r.y;
 		z = r.z;
 
+		return *this;
+	}
+
+	Vector3d& operator *(const double _d)
+	{
+		x *= _d;
+		y *= _d;
+		z *= _d;
+
+		return *this;
+	}
+
+	Vector3d& operator /(const double _d)
+	{
+		x /= _d;
+		y /= _d;
+		z /= _d;
 		return *this;
 	}
 
@@ -275,12 +294,11 @@ inline Vector3d operator-(const Vector3d& l, const Vector3d& r)
 	return Ret;
 }
 
-inline Vector3d operator*(const Vector3d& l, const float f)
+inline Vector3d operator*(const Vector3d& l, const double d)
 {
-	Vector3d Ret(l.x * f,
-				 l.y * f,
-				 l.z * f);
-	return Ret;
+	return Vector3d(l.x * d,
+		l.y * d,
+		l.z * d);
 }
 
 #endif /* H_MATH_3D_H*/
