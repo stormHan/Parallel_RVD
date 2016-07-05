@@ -4,6 +4,7 @@
 */
 #include <math.h>
 
+#include "Common.h"
 #include "math_3d.h"
 
 
@@ -24,7 +25,14 @@ namespace P_RVD
 		/*
 			compute the square of the distance of the two points
 		*/
-		float computeDistance(const Vector3d p1, const Vector3d p2);
+		double computeDistance(const Vector3d p1, const Vector3d p2);
+
+		/*
+			conpute the area of a triangle
+			pos1, pos2, pos3 represent the position of the 3 vertex
+		*/
+		double computeTriangleArea(const Vector3d p1, const Vector3d p2, const Vector3d p3);
+	
 	}
 }
 
