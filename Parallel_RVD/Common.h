@@ -14,6 +14,24 @@ namespace P_RVD
 	typedef int signed_t_index;
 
 	/*
+		find the min value
+	*/
+	template <class T>
+	T inline geo_min(T& a, T& b)
+	{
+		return (a < b) ? a : b;
+	}
+
+	/*
+	find the max value
+	*/
+	template <class T>
+	T inline geo_max(T& a, T& b)
+	{
+		return (a < b) ? b : a;
+	}
+
+	/*
 		swap function
 	*/
 	template <class T>
