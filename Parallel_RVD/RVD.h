@@ -13,6 +13,9 @@
 #include "Mesh.h"
 #include "Points.h"
 #include "Polygon.h"
+#include "PolygonAction.h"
+
+#include "SeedStore.h"
 
 #include "Math_basics.h"
 
@@ -41,6 +44,12 @@ namespace P_RVD
 		Vector3d computeCenter(const t_index t1, const t_index t2, const t_index t3);
 
 		/*
+			find the nearest n points in p_Points of an index of the Seeds
+		*/
+
+		std::vector<int> findNearestPoints(const t_index _t, int _n);
+
+		/*
 			find the nearest n points in p_Points of a point
 		*/
 		std::vector<int> findNearestPoints(const Vector3d _center, int _n);
@@ -61,6 +70,15 @@ namespace P_RVD
 			Swap two pointers between two polygons
 		*/
 		void swap_polygons(Polygon*& ping, Polygon*& pong);
+
+		/*
+			deconstruction
+		*/
+		~RestrictedVoronoiDiagram()
+		{
+			delete polygonHandler;
+		}
+
 
 	private:
 		Mesh* p_Mesh;
@@ -88,6 +106,23 @@ namespace P_RVD
 			the neighbors betweent a seed
 		*/
 		std::vector<int> seed_neighbors;
+
+		/*
+			handle the clipped polygon information
+		*/
+		PolygonAction* polygonHandler;
+
+		/*
+			temp weight and center of the clipped polygon
+		*/
+		double polygon_weight;
+		Vector3d polygon_center;
+
+		/*
+			used for updating the information of seeds.
+		*/
+		SeedStore seedsUpdater;
+
 	};
 }
 
