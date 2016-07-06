@@ -8,7 +8,8 @@ namespace P_RVD
 		p_Mesh = _M;
 		p_Points = _P;
 
-		seeds_n = 5;
+		seeds_n = 20;
+		polygonHandler = new PolygonAction();
 	}
 
 	Vector3d RestrictedVoronoiDiagram::computeCenter(const Vector3i index_triangle)
@@ -25,11 +26,43 @@ namespace P_RVD
 		return computeCenter(Vector3i((int)t1, (int)t2, (int)t3));
 	}
 
+	std::vector<int> RestrictedVoronoiDiagram::findNearestPoints(const t_index _t, int _n)
+	{
+		std::map<double, t_index> dis_index_map;
+		std::vector<int> nearest_N_index;
+		std::vector<double> temp_dis;
+
+		Vector3d _center = p_Points->getPoint(_t);
+
+		double t;
+		for (int i = 0; i < p_Points->points_nb; ++i)
+		{
+			t = Math::computeDistance(p_Points->m_points[i], _center);
+
+			while (dis_index_map.count(t) != 0)
+				t += 0.00000000001;
+			dis_index_map.insert(std::pair<double, t_index>(t, i));
+
+			temp_dis.push_back(t);
+		}
+
+		std::sort(temp_dis.begin(), temp_dis.end());
+
+		for (int i = 0; nearest_N_index.size() < _n; ++i)
+		{
+			int tmp = dis_index_map[temp_dis[i]];
+			if (tmp != _t)
+				nearest_N_index.push_back(tmp);
+		}
+		return nearest_N_index;
+	}
+
 	std::vector<int> RestrictedVoronoiDiagram::findNearestPoints(const Vector3d _center, int _n)
 	{
 		std::map<double, t_index> dis_index_map;
 		std::vector<int> nearest_N_index;
 		std::vector<double> temp_dis;
+
 		double t;
 		for (int i = 0; i < p_Points->points_nb; ++i)
 		{
@@ -75,19 +108,32 @@ namespace P_RVD
 				
 				/*
 					compute the intersection between a cell and a facet
+
+					 current polygon : the clipped area with a cell to a facet
 				*/
 				current_polygon = intersect_cell_facet(current_seed, F);
 
+
 				//muniplate the current polygon 
+				polygonHandler->setPolygon(current_polygon);
+				polygon_weight = polygonHandler->compute_weight();
+				polygon_center = polygonHandler->compute_center();
+
+				/*
+					store the information of the polygon to the exact seed
+				*/
+				seedsUpdater.addInformation(polygon_center, polygon_weight, current_seed);
 			}
 		}
+
+		seedsUpdater.UpdateSeeds();
+
 		return true;
 	}
 
 	Polygon* RestrictedVoronoiDiagram::intersect_cell_facet(t_index seed, Polygon& F)
 	{
-		Vector3d temp_seed_position = p_Points->getPoint(seed);
-		seed_neighbors = findNearestPoints(temp_seed_position, seeds_n);
+		seed_neighbors = findNearestPoints(seed, seeds_n);
 
 		Polygon* ping = &F;
 		Polygon* pong = &polygon_buffer;
@@ -95,6 +141,8 @@ namespace P_RVD
 		for (int i = 0; i < seeds_n; ++i)
 		{
 			int j = seed_neighbors[i];
+			//test the clip_by_plane's correctness
+			
 
 			clip_by_plane(*ping, *pong, seed, (t_index)j);
 			//swap ping and pong
