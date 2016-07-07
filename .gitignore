@@ -251,3 +251,4 @@ paket-files/
 # JetBrains Rider
 .idea/
 *.sln.iml
+RVD_cpu_version/RVD_cpu_version.vcxproj.filters
