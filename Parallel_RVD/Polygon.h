@@ -23,6 +23,10 @@ namespace P_RVD
 	public:
 		Polygon(){}
 
+		Polygon(Polygon& _p)
+		{
+			m_vertex = _p.m_vertex;
+		}
 		/*
 			get the number of vertex in this Polygon
 		*/
