@@ -10,6 +10,8 @@ namespace P_RVD
 
 		seeds_n = 20;
 		polygonHandler = new PolygonAction();
+
+		seedsUpdater.setSeedsNumber(p_Points->points_nb);
 	}
 
 	Vector3d RestrictedVoronoiDiagram::computeCenter(const Vector3i index_triangle)
