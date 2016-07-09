@@ -55,5 +55,6 @@ int main(int argc, char** argv)
 	RestrictedVoronoiDiagram *m_RVD = new RestrictedVoronoiDiagram(&M_in, &points);
 	m_RVD->compute_RVD();
 
+
 	return 0;
 }
