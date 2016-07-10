@@ -36,6 +36,17 @@ namespace P_RVD
 		}
 
 		/*
+			clear the PolygonAction to get prepared for the next action.
+		*/
+		void clear()
+		{
+			m_polygon = NULL;
+			weight_sum = 0.0; 
+			m_vertex.clear();
+			vertex_nb = m_vertex.size();
+		}
+
+		/*
 			set the computing
 		*/
 		void setPolygon(Polygon* _p)
