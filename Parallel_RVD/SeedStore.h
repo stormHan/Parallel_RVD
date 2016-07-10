@@ -40,25 +40,33 @@ namespace P_RVD{
 	class SeedStore
 	{
 	public:
-		SeedStore() : update_information_nb(0) {
+		SeedStore() : update_information_nb(0) {};
+
+		SeedStore(t_index _seedsnb) : update_information_nb(0), seed_nb(_seedsnb) {};
+
+		/*
+			set the seed_weight_pos vector
+			must be done before using the object
+		*/
+		void setPositionVector()
+		{
+			if (seed_nb == 0)
+			{
+				fprintf(stderr, "error setting the position vector!/n");
+				exit(0);
+			}
 			m_seed_weight_pos = std::vector<SeedWeightPosition>(seed_nb, SeedWeightPosition(
 				Vector3d(0.0, 0.0, 0.0), 0));
 		}
-
-		SeedStore(t_index _seedsnb) : update_information_nb(0), seed_nb(_seedsnb) {
-			m_seed_weight_pos = std::vector<SeedWeightPosition>(seed_nb, SeedWeightPosition(
-				Vector3d(0.0, 0.0, 0.0), 0));
-		};
-
-		/*
-			clear the information of SeedStore
-		*/
 
 		/*
 			set seeds number
 		*/ 
 		void setSeedsNumber(t_index _t) { seed_nb = _t; };
 
+		/*
+		clear the information of SeedStore
+		*/
 		void clear()
 		{
 			seed_updating_map.clear();
