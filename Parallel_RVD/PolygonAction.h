@@ -62,9 +62,9 @@ namespace P_RVD
 		}
 
 		/*
-			compute the weight_sum
+			compute the total weight and centriod times weight
 		*/
-		void compute_weight_sum();
+		void compute_centriod();
 
 		/*
 			compute the weight of the m_polygon
@@ -87,11 +87,23 @@ namespace P_RVD
 		*/
 		double compute_triangle_arae(t_index _v1, t_index _v2, t_index _v3);
 
+		/*
+			get the current_position
+		*/
+		Vector3d getCurrentPositioni(){ return current_posTimesWeight; }
+
+		/*
+			get the current weight
+		*/
+		double getCurrentWeight(){ return current_weight; }
 
 	protected:
 		Polygon* m_polygon;
 		std::vector<Vertex> m_vertex;
 		int vertex_nb;
+
+		Vector3d current_posTimesWeight;
+		double current_weight;
 
 		double weight_sum;
 	};
