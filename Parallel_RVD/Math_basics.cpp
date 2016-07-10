@@ -14,9 +14,9 @@ namespace P_RVD
 
 		double computeDistance(const Vector3d p1, const Vector3d p2)
 		{
-			return (p1.x - p2.x) * (p1.x - p2.x)
+			return sqrt((p1.x - p2.x) * (p1.x - p2.x)
 				+ (p1.y - p2.y) * (p1.y - p2.y)
-				+ (p1.z - p2.z) * (p1.z - p2.z);
+				+ (p1.z - p2.z) * (p1.z - p2.z));
 		}
 
 		double computeTriangleArea(const Vector3d p1, const Vector3d p2, const Vector3d p3)
@@ -27,11 +27,11 @@ namespace P_RVD
 
 			//Heron's Formula to compute the area of the triangle
 			double p = (a + b + c) / 2;
-			double tmp = geo_max(a, b);
-			if (p > geo_max(tmp, c))
+			
+			if (p >= a && p >= b && p >= c)
 				return sqrt(p * (p - a) * (p - b) * (p - c));
 			else
-				fprintf(stderr, "the three point cannot construct a triangle!");
+				fprintf(stderr, "the three point cannot construct a triangle!\n");
 			return 0.0;
 		}
 	}
