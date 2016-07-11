@@ -34,5 +34,23 @@ namespace P_RVD
 				fprintf(stderr, "the three point cannot construct a triangle!\n");
 			return 0.0;
 		}
+
+
+		void computeTriangleCentroid(
+			const Vector3d& p, const Vector3d& q, const Vector3d& r,
+			double a, double b, double c,
+			Vector3d& Vg, double& V
+			) {
+			double abc = a + b + c;
+			double area = computeTriangleArea(p, q, r);
+			V = area / 3.0 * abc;
+			double wp = a + abc;
+			double wq = b + abc;
+			double wr = c + abc;
+			double s = area / 12.0;
+			Vg.x = s * (wp * p.x + wq * q.x + wr * r.x);
+			Vg.y = s * (wp * p.y + wq * q.y + wr * r.y);
+			Vg.z = s * (wp * p.z + wq * q.z + wr * r.z);
+		}
 	}
 }

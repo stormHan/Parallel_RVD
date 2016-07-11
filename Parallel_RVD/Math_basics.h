@@ -32,7 +32,15 @@ namespace P_RVD
 			pos1, pos2, pos3 represent the position of the 3 vertex
 		*/
 		double computeTriangleArea(const Vector3d p1, const Vector3d p2, const Vector3d p3);
-	
+		
+		/*
+			Computes the centroid of a 3d triangle with weighted points.
+		*/
+		void computeTriangleCentroid(
+			const Vector3d& p, const Vector3d& q, const Vector3d& r,
+			double a, double b, double c,
+			Vector3d& Vg, double& V
+			);
 	}
 }
 
