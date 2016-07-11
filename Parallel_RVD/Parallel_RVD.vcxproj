@@ -51,7 +51,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
@@ -78,16 +78,33 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Command_linecpp.cpp" />
+    <ClCompile Include="Command_line.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="math_3d.cpp" />
+    <ClCompile Include="Math_basics.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Mesh_io.cpp" />
+    <ClCompile Include="Mesh_repair.cpp" />
+    <ClCompile Include="Points.cpp" />
+    <ClCompile Include="Polygon.cpp" />
+    <ClCompile Include="PolygonAction.cpp" />
+    <ClCompile Include="RVD.cpp" />
+    <ClCompile Include="SeedStore.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Command_line.h" />
     <ClInclude Include="Common.h" />
+    <ClInclude Include="math_3d.h" />
+    <ClInclude Include="Math_basics.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Mesh_io.h" />
+    <ClInclude Include="Mesh_repair.h" />
+    <ClInclude Include="Points.h" />
+    <ClInclude Include="Polygon.h" />
+    <ClInclude Include="PolygonAction.h" />
+    <ClInclude Include="RVD.h" />
+    <ClInclude Include="RVD_Vertex.h" />
+    <ClInclude Include="SeedStore.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
