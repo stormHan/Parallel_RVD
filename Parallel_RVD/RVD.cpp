@@ -12,6 +12,7 @@ namespace P_RVD
 		polygonHandler = new PolygonAction();
 
 		seedsUpdater.setSeedsNumber(p_Points->points_nb);
+		seedsUpdater.setPositionVector();
 	}
 
 	Vector3d RestrictedVoronoiDiagram::computeCenter(const Vector3i index_triangle)
@@ -115,16 +116,19 @@ namespace P_RVD
 				*/
 				current_polygon = intersect_cell_facet(current_seed, F);
 
+				if (current_polygon->getVertex_nb() == 0)
+					break;
 
 				//muniplate the current polygon 
+				polygonHandler->clear();
 				polygonHandler->setPolygon(current_polygon);
-				polygon_weight = polygonHandler->compute_weight();
-				polygon_center = polygonHandler->compute_center();
+				polygonHandler->compute_centriod();
+				
 
 				/*
 					store the information of the polygon to the exact seed
 				*/
-				seedsUpdater.addInformation(polygon_center, polygon_weight, current_seed);
+				seedsUpdater.addInformation(polygonHandler->getCurrentPosition(), polygonHandler->getCurrentWeight(), current_seed);
 			}
 		}
 
