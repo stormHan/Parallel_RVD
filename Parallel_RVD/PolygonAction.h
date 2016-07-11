@@ -44,6 +44,9 @@ namespace P_RVD
 			weight_sum = 0.0; 
 			m_vertex.clear();
 			vertex_nb = m_vertex.size();
+
+			current_weight = 0.0;
+			current_posTimesWeight = Vector3d(0.0, 0.0, 0.0);
 		}
 
 		/*
@@ -90,7 +93,7 @@ namespace P_RVD
 		/*
 			get the current_position
 		*/
-		Vector3d getCurrentPositioni(){ return current_posTimesWeight; }
+		Vector3d getCurrentPosition(){ return current_posTimesWeight; }
 
 		/*
 			get the current weight
