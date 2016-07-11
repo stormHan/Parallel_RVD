@@ -6,9 +6,13 @@ namespace P_RVD
 	void SeedStore::addInformation(SeedWeightPosition _swp, t_index _t)
 	{
 		seed_updating_map.insert(std::make_pair(_swp, _t));
-		
+	
 		update_information_nb++;
 
+		if (seed_updating_map.size() != update_information_nb)
+		{
+			printf("  ");
+		}
 	}
 
 	void SeedStore::addInformation(Vector3d _pos, double _weight, t_index _t)

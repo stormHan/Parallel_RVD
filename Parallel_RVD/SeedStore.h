@@ -32,8 +32,18 @@ namespace P_RVD{
 
 		bool operator < (const SeedWeightPosition _swp) const
 		{
-			if (center.x < _swp.center.x) return true;
-			else return false;
+			if (center.x < _swp.center.x) 
+				return true;
+			else if (center.x == _swp.center.x && center.y < _swp.center.y)
+			{
+				return true;
+			}
+			else if (center.x == _swp.center.x && center.y == _swp.center.y && center.z < _swp.center.z)
+			{
+				return true;
+			}
+			else
+				return false;
 		}
 	};
 
