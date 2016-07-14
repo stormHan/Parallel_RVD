@@ -9,4 +9,15 @@ namespace P_RVD
 		points_nb = m_points.size();
 	}
 
+	void Points::savePointsWithSeedStore(std::vector<SeedWeightPosition> _pos)
+	{
+		clear();
+
+		points_nb = _pos.size();
+
+		for (int i = 0; i < points_nb; ++i)
+		{
+			m_points.push_back(Vector3d(_pos[i].center));
+		}
+	}
 }
