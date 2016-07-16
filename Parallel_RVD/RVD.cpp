@@ -133,7 +133,8 @@ namespace P_RVD
 		}
 
 		seedsUpdater.UpdateSeeds();
-		seedsUpdater.saveSeedsPosition(*p_Points);
+
+		p_Points->savePointsWithSeedStore(seedsUpdater.getSeedsPosition());
 
 		return true;
 	}
