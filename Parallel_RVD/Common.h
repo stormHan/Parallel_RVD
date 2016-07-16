@@ -14,6 +14,11 @@ namespace P_RVD
 	typedef int signed_t_index;
 
 	/*
+		for glut
+	*/
+	typedef unsigned int uint;
+
+	/*
 		find the min value
 	*/
 	template <class T>
