@@ -52,5 +52,13 @@ namespace P_RVD
 			Vg.y = s * (wp * p.y + wq * q.y + wr * r.y);
 			Vg.z = s * (wp * p.z + wq * q.z + wr * r.z);
 		}
+
+		Vector3d computeNormal(const Vector3d _v1, const Vector3d _v2, const Vector3d _v3)
+		{
+			Vector3d vector1 = _v1 - _v2;
+			Vector3d vector2 = _v2 - _v3;
+			 
+			return vector1.Cross(vector2).normalize();
+		}
 	}
 }

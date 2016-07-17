@@ -41,6 +41,11 @@ namespace P_RVD
 			double a, double b, double c,
 			Vector3d& Vg, double& V
 			);
+
+		/*
+			compute the normal with 3 vertex
+		*/
+		Vector3d computeNormal(const Vector3d _v1, const Vector3d _v2, const Vector3d _v3);
 	}
 }
 
