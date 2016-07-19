@@ -269,10 +269,14 @@ struct Vector3d
 		return *this;
 	}
 
-	double cross(const Vector3d r) const
+	double dot(const Vector3d r) const
 	{
 		return x * r.x + y * r.y + z * r.z;
 	}
+
+	Vector3d& Cross(const Vector3d r) const;
+
+	Vector3d& normalize();
 };
 
 
