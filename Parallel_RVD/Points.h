@@ -15,6 +15,10 @@ namespace P_RVD
 	public:
 		friend class RestrictedVoronoiDiagram;
 		/*
+			empty constructor
+		*/
+		Points(){ points_nb = 0; }
+		/*
 			store the Points infomation from a Mesh
 		*/
 		Points(const Mesh& _M);
@@ -31,6 +35,11 @@ namespace P_RVD
 			m_points.clear();
 			points_nb = 0;
 		}
+
+		/*
+			get the number of Points
+		*/
+		int getPointsNumber() { return points_nb; }
 
 		/*
 			set m_points with a vector from seedstore class
