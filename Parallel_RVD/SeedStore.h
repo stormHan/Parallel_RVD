@@ -13,7 +13,6 @@
 #include "math_3d.h"
 #include "Common.h"
 
-
 namespace P_RVD{
 
 	/*
@@ -22,6 +21,7 @@ namespace P_RVD{
 	*/
 	class SeedWeightPosition
 	{
+
 	public:
 		SeedWeightPosition() : weight(0.00), center(Vector3d(0.0, 0.0, 0.0)) {};
 
@@ -98,7 +98,21 @@ namespace P_RVD{
 		*/
 		t_index getSeedUpdatingInformation(){ return update_information_nb; };
 
+		/*
+			get the Seeds' position information
+		*/
+		std::vector<SeedWeightPosition> getSeedsPosition(){ return m_seed_weight_pos; }
+
+
+		/*
+			use the seeds information the udpate the position of tht seeds
+		*/
 		void UpdateSeeds();
+
+		/*
+			save the seeds' position to a Point data structure
+		*/
+		//void saveSeedsPosition(Points& _points);
 
 	protected:
 		/*
@@ -108,8 +122,12 @@ namespace P_RVD{
 		std::map<SeedWeightPosition, t_index> seed_updating_map;
 		t_index update_information_nb;
 
-		t_index seed_nb;
+		/*
+			a vector to store the position of the seeds
+			the indice of vector is the indice of seeds.
+		*/
 		std::vector<SeedWeightPosition> m_seed_weight_pos;
+		t_index seed_nb;
 	};
 }
 
