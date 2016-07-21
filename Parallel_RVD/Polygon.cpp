@@ -51,7 +51,7 @@ namespace P_RVD
 		// normal vector of the bisector [i, j]
 		// and m the middle point of the bisector.
 		double d;
-		d = (position_i + position_j).cross(position_i - position_j);
+		d = (position_i + position_j).dot(position_i - position_j);
 
 		//The predecessor of the first vertex is the last vertex
 		t_index prev_index_vertex = getVertex_nb() - 1;
@@ -60,7 +60,7 @@ namespace P_RVD
 		
 		//then we compute prev_vertex_position "cross" n 
 		//prev_l = prev_vertex_position . n
-		double prev_l = prev_vertex_position.cross(position_i - position_j);
+		double prev_l = prev_vertex_position.dot(position_i - position_j);
 
 		P_RVD::Sign prev_status = P_RVD::geo_sgn(2.0 * prev_l - d);
 
@@ -70,7 +70,7 @@ namespace P_RVD
 			const Vertex* vertex = &(getVertex(k));
 			Vector3d vertex_position = vertex->getPosition();
 
-			double l = vertex_position.cross(position_i - position_j);
+			double l = vertex_position.dot(position_i - position_j);
 			
 			//We compute:
 			// side1(pi, pj, q) = sign(2*q.n - n.m) = sign(2*l - d)
