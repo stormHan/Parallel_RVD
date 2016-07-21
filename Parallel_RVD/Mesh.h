@@ -103,7 +103,7 @@ namespace P_RVD
 		/*
 			get the number of facets
 		*/
-		unsigned int getFacetsNumber(){ return m_nb; }
+		unsigned int getFacetsNumber() const { return m_nb; }
 
 	private:
 		std::vector<Facet> m_Facets;
