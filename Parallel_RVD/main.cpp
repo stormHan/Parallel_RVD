@@ -36,7 +36,6 @@ void RenderCB(void)
 	glColor3f(1.0f, 0.0f, 0.0f);
 	m_GraphicsDrawer->DrawPoints(p_in);
 
-	
 	glColor3f(0.0f, 1.0f, 0.0f);
 	m_GraphicsDrawer->DrawPoints(p_out);
 
