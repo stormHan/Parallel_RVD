@@ -103,6 +103,7 @@ namespace P_RVD
 	protected:
 		Polygon* m_polygon;
 		std::vector<Vertex> m_vertex;
+		Vertex p;
 		int vertex_nb;
 
 		Vector3d current_posTimesWeight;
