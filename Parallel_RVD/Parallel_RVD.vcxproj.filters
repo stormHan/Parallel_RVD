@@ -51,6 +51,9 @@
     <ClCompile Include="SeedStore.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="DrawGraphics.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mesh.h">
@@ -90,6 +93,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="SeedStore.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="DrawGraphics.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Glut_generator.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

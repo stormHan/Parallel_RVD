@@ -41,6 +41,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>C:\Users\JWhan\Documents\GitHub\Parallel_RVD\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\JWhan\Documents\GitHub\Parallel_RVD\Lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -79,6 +81,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Command_line.cpp" />
+    <ClCompile Include="DrawGraphics.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="math_3d.cpp" />
     <ClCompile Include="Math_basics.cpp" />
@@ -94,6 +97,8 @@
   <ItemGroup>
     <ClInclude Include="Command_line.h" />
     <ClInclude Include="Common.h" />
+    <ClInclude Include="DrawGraphics.h" />
+    <ClInclude Include="Glut_generator.h" />
     <ClInclude Include="math_3d.h" />
     <ClInclude Include="Math_basics.h" />
     <ClInclude Include="Mesh.h" />
