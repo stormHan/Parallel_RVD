@@ -14,6 +14,7 @@
     <ProjectGuid>{D258D068-6974-4E6F-8974-C3EBED0595FF}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>Parallel_RVD</RootNamespace>
+    <ProjectName>comput_RVD</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
