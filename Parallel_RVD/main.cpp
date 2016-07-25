@@ -1,6 +1,6 @@
 /*
 
-	Parallel compute the Restricted Voronoi Diagram
+	compute the Restricted Voronoi Diagram in CPU
 
 */
 
