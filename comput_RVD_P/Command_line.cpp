@@ -1,7 +1,7 @@
 
 #include "Command_line.h"
 
-namespace P_RVD
+namespace Parallel_RVD
 {
 	namespace Cmd
 	{
