@@ -24,7 +24,7 @@ namespace P_RVD
 	{
 		return m_Vertices[_nb];
 	}
-
+	 
 	void MeshVertices::addPoint(Vector3d _newpoint)
 	{
 		m_nb++;
