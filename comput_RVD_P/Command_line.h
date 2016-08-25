@@ -9,7 +9,7 @@ handle the command argument
 #ifndef H_COMMAND_LINE_H
 #define H_COMMAND_LINE_H
 
-namespace Parallel_RVD
+namespace P_RVD
 {
 	namespace Cmd
 	{
