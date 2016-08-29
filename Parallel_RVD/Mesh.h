@@ -61,6 +61,11 @@ namespace P_RVD
 		Vector3d getPoint(t_index _nb) const;
 		
 		/*
+			get the number of point
+		*/
+		int getPointNumber() const { return m_nb; }
+
+		/*
 			add a Point to m_Vertices
 		*/
 		void addPoint(Vector3d _newpoint);
