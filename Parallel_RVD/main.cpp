@@ -11,6 +11,10 @@
 #include "Points.h"
 #include "Mesh_repair.h"
 
+// Cuda part
+#include "CudaHelper.h"
+
+
 // Renderring part
 #include "Glut_generator.h"
 #include "DrawGraphics.h"
@@ -30,7 +34,6 @@ void RenderCB(void)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClearColor(0.1f, 0.1f, 0.2f, 0.0f);
 
-	
 	glDisable(GL_COLOR_MATERIAL);
 	glDisable(GL_LIGHTING);
 	glColor3f(1.0f, 0.0f, 0.0f);
@@ -103,7 +106,23 @@ int main(int argc, char** argv)
 	Points points_out(points_in);
 
 	/*
-	ÉèÖÃKdtree
+		ÉèÖÃKdtree
+	*/
+
+	/*
+		trans the data from host to device
+	*/
+	double* host_points;
+
+	trans_points(points, host_points);
+
+	double* host_mesh_vertex;
+	int* host_facet_index;
+
+	trans_mesh(M_in, host_mesh_vertex, host_facet_index);
+
+	/*
+		Compute the RVD 
 	*/
 	RestrictedVoronoiDiagram *m_RVD = new RestrictedVoronoiDiagram(&M_in, &points_out);
 	m_RVD->compute_RVD();
@@ -119,6 +138,8 @@ int main(int argc, char** argv)
 	m_GraphicsDrawer->Init();
 	m_GraphicsDrawer->Run();
 
+	//p_in  records the position before
+	//p_out records the position after compute RVD
 	p_in = points;
 	p_out = points_out;
 
