@@ -26,7 +26,7 @@ namespace P_RVD
 		/*
 			get the exact position of the Seed via index
 		*/
-		const Vector3d getPoint(t_index _t){ return m_points[_t];}
+		const Vector3d getPoint(t_index _t) const{ return m_points[_t];}
 
 		/*
 			clear the points
@@ -39,7 +39,7 @@ namespace P_RVD
 		/*
 			get the number of Points
 		*/
-		int getPointsNumber() { return points_nb; }
+		int getPointsNumber() const{ return points_nb; }
 
 		/*
 			set m_points with a vector from seedstore class
