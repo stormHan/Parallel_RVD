@@ -13,7 +13,7 @@
 
 // Cuda part
 #include "CudaHelper.h"
-
+#include <time.h>
 
 // Renderring part
 #include "Glut_generator.h"
@@ -29,6 +29,14 @@ using namespace P_RVD;
 GraphicsDrawer* m_GraphicsDrawer = new GraphicsDrawer();
 Points p_in, p_out;
 Mesh M_in;
+
+/*
+	call the cuda function
+	pass the data to the device
+*/
+extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_pointer,
+	int* host_facet_index, int points_nb, int mesh_vertex_nb, int mesh_facet_number);
+
 void RenderCB(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -120,12 +128,20 @@ int main(int argc, char** argv)
 	int* host_facet_index;
 
 	trans_mesh(M_in, host_mesh_vertex, host_facet_index);
+	
+	long t1 = clock();
+	runCuda(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
+		M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber());
+	printf("GPU running time : %lfms\n", (double)(clock() - t1));
 
+	
 	/*
-		Compute the RVD 
+		Compute the RVD in CPU
 	*/
+	long t2 = clock();
 	RestrictedVoronoiDiagram *m_RVD = new RestrictedVoronoiDiagram(&M_in, &points_out);
 	m_RVD->compute_RVD();
+	printf("CPU running time : %lfms\n", (double)(clock() - t2));
 
 	/*
 		Set the Windows
