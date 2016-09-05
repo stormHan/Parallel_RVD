@@ -15,6 +15,14 @@ inline void checkCudaErrors(cudaError err)
 }
 
 /*
+	device function
+*/
+__device__ double computeCentriod(double a, double b, double c)
+{
+	
+}
+
+/*
 	a thread to compute the RVD in parallel way
 */
 __global__ void compute_RVD(double* seeds_pointer, int seeds_nb, 
@@ -23,7 +31,7 @@ __global__ void compute_RVD(double* seeds_pointer, int seeds_nb,
 {
 	int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-	
+	//
 }
 
 
