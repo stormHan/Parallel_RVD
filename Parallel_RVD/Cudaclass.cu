@@ -17,7 +17,7 @@ inline void checkCudaErrors(cudaError err)
 /*
 	device function
 */
-__device__ double computeCentriod(double a, double b, double c)
+__device__ double computeCentriod(double a, double b, double c, double centriod)
 {
 	
 }
@@ -30,7 +30,6 @@ __global__ void compute_RVD(double* seeds_pointer, int seeds_nb,
 							int* mesh_facet,    int mesh_facet_nb)
 {
 	int tid = blockIdx.x * blockDim.x + threadIdx.x;
-
 	//
 }
 
