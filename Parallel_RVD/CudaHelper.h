@@ -21,7 +21,7 @@ namespace P_RVD
 	host_data_pointer: pointer in cpu
 	device_data_pointer: pointer in gpu
 	*/
-	void trans_points(const Points p, double* host_data_pointer)
+	void trans_points(const Points p, double*& host_data_pointer)
 	{
 		int number = p.getPointsNumber();
 		host_data_pointer = (double*)malloc(3 * sizeof(double) * number);
@@ -43,7 +43,7 @@ namespace P_RVD
 		host_data_pointer: the mesh vertices data(double)
 		host_index_pointer: the mesh facet indice(int)
 	*/
-	void trans_mesh(const Mesh m, double* host_data_pointer, int* host_index_pointer)
+	void trans_mesh(const Mesh m, double*& host_data_pointer, int*& host_index_pointer)
 	{
 		int vertex_nb = m.meshVertices.getPointNumber();
 		host_data_pointer = (double*)malloc(3 * sizeof(double) * vertex_nb);
