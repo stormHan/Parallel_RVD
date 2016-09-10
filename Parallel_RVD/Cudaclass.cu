@@ -3,7 +3,10 @@
 
 #include "Math_basics.cuh"
 
+#include "Polygon.h"
 #include <iostream>
+
+using namespace P_RVD;
 /*
 	process the cuda error
 */
@@ -26,6 +29,152 @@ __device__ double3 computeCentriod(double3 a, double3 b, double3 c)
 		(a.y + b.y + c.y) / 3,
 		(a.z + b.z + c.z) / 3, };
 	return ret;
+}
+
+/*
+	device function
+	find nearest n seeds in device
+
+	input:
+	centriod : the physical position of the seed
+	seeds_pointer : pointer which store the position of the seeds
+	seeds_nb : the number of seeds
+
+	output:
+	nearest_points : the result of the function which store the index of the nearest seeds
+*/
+__device__
+void findNearestPoints(double3 centriod, double* seeds_pointer, int seeds_nb, int* nearest_points, int nearest_points_nb)
+{
+	double* distance_from_centroid = (double*)malloc(sizeof(double) * seeds_nb);
+
+	//find the nearest points
+	for (int i = 0; i < seeds_nb; ++i)
+	{
+		double3 seeds_pos = { seeds_pointer[i * 3 + 0], seeds_pointer[i * 3 + 1], seeds_pointer[i * 3 + 2] };
+		distance_from_centroid[i] = computeDistance(centriod, seeds_pos);
+	}
+
+	//设置一个数组来存储下标
+	int* index = (int*)malloc(sizeof(int) * seeds_nb);
+	for (int i = 0; i < seeds_nb; ++i)
+	{
+		index[i] = i;
+	}
+
+	for (int i = 1; i < seeds_nb; ++i)
+	{
+		double key = distance_from_centroid[i];
+		int store_index = index[i];
+		for (int j = i - 1; j >= 0; --j)
+		{
+			if (distance_from_centroid[j] >= key)
+			{
+				distance_from_centroid[j + 1] = distance_from_centroid[j];
+				index[j + 1] = index[j];
+				if (j == 0)
+				{
+					distance_from_centroid[j] = key;
+					index[j] = store_index;
+				}
+			}
+			else
+			{
+				distance_from_centroid[j + 1] = key;
+				index[j + 1] = store_index;
+				break;
+			}
+
+		}
+	}
+	for (int i = 0; i < 20; ++i)
+	{
+		nearest_points[i] = index[i];
+	}
+}
+
+
+/*
+	device function
+	compute the intersection of a facet and a seed(a cell)
+
+	input:
+
+*/
+__device__
+void intersection_clip_facet(double* polygon_pointer, int vertex_nb, int current_seed, double* seeds_pointer, int seeds_nb)
+{
+	double3 current_seed_pos = { seeds_pointer[current_seed * 3 + 0],
+		seeds_pointer[current_seed * 3 + 1],
+		seeds_pointer[current_seed * 3 + 2] };
+
+	int* seeds_neighbors = (int*)malloc(sizeof(int) * 20);
+	findNearestPoints(current_seed_pos, seeds_pointer, seeds_nb, seeds_neighbors, 20);
+
+	//set a buffer pointer to store the polygon
+	double* polygon_buffer = (double*)malloc(sizeof(double) * 10 * 4);
+	int polygon_buffer_nb = 0;
+
+	for (int i = 0; i < 20; ++i)
+	{
+		int j = seeds_neighbors[i];
+
+		clip_by_plane(polygon_pointer, vertex_nb, polygon_buffer, polygon_buffer_nb, current_seed, j, seeds_pointer, seeds_nb);
+		swap_polygons(polygon_pointer, vertex_nb, polygon_buffer, polygon_buffer_nb);
+	}
+}
+
+/*
+	device function
+	
+	compute the intersection(stored in a polygon) clipped by a bisector defined by seed i and j
+
+	input : polygon ping and its number
+	output: polygon pong and its number
+*/
+__device__
+void clip_by_plane(double* ping, int ping_nb, double* pong, int pong_nb, int seed_i, int seed_j, double* seeds_pointer, int seeds_nb)
+{
+	//reset the pong
+	pong_nb = 0;
+
+	if (ping_nb == 0)
+		return;
+
+	//get the position of seed i and seed j
+	double3 position_i = { seeds_pointer[seed_i * 3 + 0], seeds_pointer[seed_i * 3 + 1], seeds_pointer[seed_i * 3 + 2] };
+	double3 position_j = { seeds_pointer[seed_j * 3 + 0], seeds_pointer[seed_j * 3 + 1], seeds_pointer[seed_j * 3 + 2] };
+
+	// Compute d = n . (2m), where n is the
+	// normal vector of the bisector [i, j]
+	// and m the middle point of the bisector.
+	double d;
+	d = dot(position_i,position_j)
+
+}
+
+/*
+	device function
+	swap the ping and pong to make sure 
+	ping store the result;
+*/
+__device__
+void swap_polygons(double* ping, int ping_nb, double* pong, int pong_nb)
+{
+	//!!! can be accerate
+	//不确定是否可以使用memset memcpy
+	double temp;
+	int temp_nb = ping_nb;
+
+	ping_nb = pong_nb;
+	pong_nb = temp_nb;
+
+	for (int i = 0; i < 40; ++i)
+	{
+		temp = ping[i];
+		ping[i] = pong[i];
+		pong[i] = temp;
+	}
 }
 
 
@@ -64,47 +213,33 @@ __global__ void compute_RVD(double* seeds_pointer, int seeds_nb,
 
 		double3 centriod = computeCentriod(v1, v2, v3);
 
-		double* distance_from_centroid = (double*)malloc(sizeof(double) * seeds_nb);
+		int* nearest_points = (int*)malloc(sizeof(int) * 20);
 
-		//find the nearest points
-		for (int i = 0; i < seeds_nb; ++i)
+		findNearestPoints(centriod, seeds_pointer, seeds_nb, nearest_points, 20);
+		
+		/*
+			get the nearest 20 points' index
+			clip the facet
+		*/
+		for (int i = 0; i < 20; ++i)
 		{
-			double3 seeds_pos = { seeds_pointer[i * 3 + 0], seeds_pointer[i * 3 + 1], seeds_pointer[i * 3 + 2] };
-			distance_from_centroid[i] = computeDistance(centriod, seeds_pos);
-		}
+			int current_seed = nearest_points[i];
 
-		//设置一个数组来存储下标
-		int* index = (int*)malloc(sizeof(int) * seeds_nb);
-		for (int i = 0; i < seeds_nb; ++i)
-		{
-			index[i] = i;
-		}
+			double* polygon = (double*)malloc(sizeof(double) * 10 * 4);
+			int vertex_nb = 3;
+			//intialize the polygon with the 3 vertex of the current facet
+			/*
+				polygon pointer can be apart by several vertex
+				a vertex is made up with x,y,z,w
+				w : the weight of a vertex
+			*/
+			polygon[0] = v1.x; polygon[1] = v1.y; polygon[2] = v1.z; polygon[3] = 1.0;
+			polygon[4] = v2.x; polygon[5] = v2.y; polygon[6] = v2.z; polygon[7] = 1.0;
+			polygon[8] = v3.x; polygon[9] = v3.y; polygon[10] = v3.z; polygon[11] = 1.0;
 
-		for (int i = 1; i < seeds_nb; ++i)
-		{
-			double key = distance_from_centroid[i];
-			int store_index = index[i];
-			for (int j = i - 1; j >= 0; --j)
-			{
-				if (distance_from_centroid[j] >= key)
-				{
-					distance_from_centroid[j + 1] = distance_from_centroid[j];
-					index[j + 1] = index[j];
-					if (j == 0)
-					{
-						distance_from_centroid[j] = key;
-						index[j] = store_index;
-					}
-				}
-				else
-				{
-					distance_from_centroid[j + 1] = key;
-					index[j + 1] = store_index;
-					break;
-				}
-				
-			}
+
 		}
+		
 
 		//pass the data to test data
 		if (tid == 0)
@@ -113,10 +248,9 @@ __global__ void compute_RVD(double* seeds_pointer, int seeds_nb,
 			test_centriod[1] = centriod.y;
 			test_centriod[2] = centriod.z;
 
-			for (int i = 0; i < seeds_nb; ++i)
+			for (int i = 0; i < 20; ++i)
 			{
-				test_dis[i] = distance_from_centroid[i];
-				test_index[i] = index[i];
+				test_index[i] = nearest_points[i];
 			}
 		}
 	}
@@ -175,7 +309,7 @@ extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_poi
 		printf("%d  : %.16lf  \n",i, host_test_dis[i]);
 	}
 
-	for (int i = 0; i < points_nb; ++i)
+	for (int i = 0; i < 20; ++i)
 	{
 		printf("%d  : %d  \n",i, host_test_index[i]);
 	}
