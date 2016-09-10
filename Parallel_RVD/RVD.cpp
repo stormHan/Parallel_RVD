@@ -70,7 +70,7 @@ namespace P_RVD
 		for (int i = 0; i < p_Points->points_nb; ++i)
 		{
 			t = Math::computeDistance(p_Points->m_points[i], _center);
-
+			 
 			while (dis_index_map.count(t) != 0)
 				t += 0.00000000001;
 			dis_index_map.insert(std::pair<double, t_index>(t, i));
