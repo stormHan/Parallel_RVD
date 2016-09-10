@@ -120,15 +120,16 @@ int main(int argc, char** argv)
 	/*
 		trans the data from host to device
 	*/
-	double* host_points;
+	double* host_points = NULL;
 
 	trans_points(points, host_points);
 
-	double* host_mesh_vertex;
-	int* host_facet_index;
+	double* host_mesh_vertex = NULL;
+	int* host_facet_index = NULL;
 
 	trans_mesh(M_in, host_mesh_vertex, host_facet_index);
 	
+
 	long t1 = clock();
 	runCuda(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
 		M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber());
@@ -160,11 +161,11 @@ int main(int argc, char** argv)
 	p_in = points;
 	p_out = points_out;
 
-	glutDisplayFunc(&RenderCB);
+	//glutDisplayFunc(&RenderCB);
 	//glutReshapeFunc(&myResize);
 
-	glutPostRedisplay();
-	glutMainLoop();
+	//glutPostRedisplay();
+	//glutMainLoop();
 
 	delete m_GraphicsDrawer;
 
