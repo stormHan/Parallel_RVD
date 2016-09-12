@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="CudaFile">
+      <UniqueIdentifier>{921c2757-9e79-41b7-9e5c-aa42021ab70c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -101,5 +104,19 @@
     <ClInclude Include="Glut_generator.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="CudaHelper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Math_basics.cuh">
+      <Filter>CudaFile</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="Cudaclass.cu">
+      <Filter>CudaFile</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Math_basics.cu">
+      <Filter>CudaFile</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>
