@@ -100,6 +100,11 @@ namespace P_RVD
 		*/
 		void clip_by_plane(Polygon& _target, Points _points, t_index _i, t_index _j);
 
+		/*
+			print the polygon
+		*/
+		void show_polygon();
+
 	protected:
 		std::vector<Vertex> m_vertex;
 	};
