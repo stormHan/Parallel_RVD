@@ -106,8 +106,10 @@ input : polygon ping and its number
 output: polygon pong and its number
 */
 __device__
-void clip_by_plane(double* ping, int& ping_nb, double* pong, int& pong_nb, int seed_i, int seed_j, double* seeds_pointer, int seeds_nb)
+void clip_by_plane(double* ping, int& ping_nb, double* pong, int& pong_nb, int seed_i, int seed_j, double* seeds_pointer, int seeds_nb, double* test_double, int _tid)
 {
+	//test 
+	int index = 150;
 	//reset the pong
 	pong_nb = 0;
 
@@ -193,6 +195,15 @@ void clip_by_plane(double* ping, int& ping_nb, double* pong, int& pong_nb, int s
 			pong[pong_nb * 4 + 3] = I.w;
 			pong_nb++;
 
+			if (_tid == 0 && seed_i == 104 && seed_j == 12)
+			{
+				
+				test_double[index] = I.x;
+				test_double[index + 1] = I.y;
+				test_double[index + 2] = I.z;
+				test_double[index + 3] = I.w;
+				index = index + 4;
+			}
 		}
 
 		if (status > 0)
@@ -203,7 +214,23 @@ void clip_by_plane(double* ping, int& ping_nb, double* pong, int& pong_nb, int s
 			pong[pong_nb * 4 + 2] = vertex.z;
 			pong[pong_nb * 4 + 3] = vertex.w;
 			pong_nb++;
+
+			if (_tid == 0 && seed_i == 104 && seed_j == 12)
+			{
+
+				test_double[index] = vertex.x;
+				test_double[index + 1] = vertex.y;
+				test_double[index + 2] = vertex.z;
+				test_double[index + 3] = vertex.w;
+				index = index + 4;
+			}
 		}
+
+		prev_vertex = vertex;
+		prev_vertex_position = vertex_position;
+		prev_status = status;
+		prev_l = l;
+		prev_index_vertex = k;
 	}
 	return;
 }
@@ -258,7 +285,7 @@ void intersection_clip_facet(double* polygon_pointer, int& vertex_nb, int curren
 	{
 		int j = seeds_neighbors[i];
 		int q;
-		if (tid == 0 && _i == 0 && i == 19)
+		if (tid == 0 && _i == 1 && i == 19)
 		{
 			for (q = 0; q < vertex_nb * 4; ++q)
 			{
@@ -268,15 +295,15 @@ void intersection_clip_facet(double* polygon_pointer, int& vertex_nb, int curren
 
 		if (current_seed != j)
 		{ 
-			if (tid == 0 && _i == 0 && i == 19)
+			if (tid == 0 && _i == 1 && i == 19)
 			{
 				test_index[42] = j;
 				test_index[43] = vertex_nb;
 				
 			}
-			clip_by_plane(polygon_pointer, vertex_nb, polygon_buffer, polygon_buffer_nb, current_seed, j, seeds_pointer, seeds_nb);
+			clip_by_plane(polygon_pointer, vertex_nb, polygon_buffer, polygon_buffer_nb, current_seed, j, seeds_pointer, seeds_nb, test_polygon, tid);
 			swap_polygons(polygon_pointer, vertex_nb, polygon_buffer, polygon_buffer_nb);
-			if (tid == 0 && _i == 0 && i == 19)
+			if (tid == 0 && _i == 1 && i == 19)
 			{
 				test_index[44] = vertex_nb;
 				test_index[45] = polygon_buffer_nb;
@@ -287,7 +314,7 @@ void intersection_clip_facet(double* polygon_pointer, int& vertex_nb, int curren
 			}
 		}
 	}
-	if (tid == 0 && _i == 0)
+	if (tid == 0 && _i == 1)
 	{
 		test_polygon[3] = current_seed_pos.x;
 		test_polygon[4] = current_seed_pos.y;
@@ -485,5 +512,17 @@ extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_poi
 	{
 		printf("x : %.17lf, y: %.17lf, z : %.17lf, w : %.6lf\n\n", host_test_dis[101 + i * 4 + 0], host_test_dis[101 + i * 4 + 1], host_test_dis[101 + i * 4 + 2], host_test_dis[101 + i * 4 + 3]);
 	}
+
+	printf("增加的点\n");
+	for (int i = 0; i < 4; ++i)
+	{
+		printf("x : %.17lf, y: %.17lf, z : %.17lf, w : %.6lf\n\n", host_test_dis[150 + i * 4 + 0], host_test_dis[150 + i * 4 + 1], host_test_dis[150 + i * 4 + 2], host_test_dis[150 + i * 4 + 3]);
+	}
+
 	printf("successfully running!\n");
 }
+
+
+
+
+
