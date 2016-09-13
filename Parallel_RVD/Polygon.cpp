@@ -124,11 +124,13 @@ namespace P_RVD
 					I.setSeed(vertex->getSeed());
 				}
 				_target.add_vertex(I);
+				printf("add I : %.17lf, %.17lf, %.17lf, %lf\n", I.getPosition().x, I.getPosition().y, I.getPosition().z, I.getWeight());
 			}
 
 			if (status > 0)
 			{
 				_target.add_vertex(*vertex);
+				printf("add vertex : %.17lf, %.17lf, %.17lf, %lf\n", vertex->getPosition().x, vertex->getPosition().y, vertex->getPosition().z, vertex->getWeight());
 			}
 			prev_vertex = vertex;
 			prev_vertex_position = vertex_position;
@@ -138,5 +140,15 @@ namespace P_RVD
 		}
 
 		return;
+	}
+
+	void Polygon::show_polygon()
+	{
+		printf("vertex number : %d\n", this->getVertex_nb());
+		for (int i = 0; i < getVertex_nb(); ++i)
+		{
+			printf("number %d : x : %.17lf, y : %.17lf, z : %.17lf, w : %lf\n", i + 1, getVertex(i).getPosition().x,
+				getVertex(i).getPosition().y, getVertex(i).getPosition().z, getVertex(i).getWeight());
+		}
 	}
 }
