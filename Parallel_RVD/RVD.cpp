@@ -152,9 +152,20 @@ namespace P_RVD
 			//test the clip_by_plane's correctness
 			
 
+			printf("CPU :计算 %d 和 %d的半平面情况\n", seed, j);
+			printf("---------before---------\n");
+			printf("ping\n");
+			ping->show_polygon();
+			printf("pong\n");
+			pong->show_polygon();
 			clip_by_plane(*ping, *pong, seed, (t_index)j);
 			//swap ping and pong
 			swap_polygons(ping, pong);
+			printf("---------after----------\n");
+			printf("ping\n");
+			ping->show_polygon();
+			printf("pong\n");
+			pong->show_polygon();
 		}
 		//swap the ping polygon and pong polygon
 		//the result must be stored in the ping polygons
