@@ -1,5 +1,6 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+#include "device_atomic_functions.h"
 
 #include "Math_basics.cuh"
 
@@ -7,6 +8,9 @@
 #include <iostream>
 
 using namespace P_RVD;
+
+//set global variable to store the seeds' position and weight
+__device__ double* SeedsInformation;
 /*
 	process the cuda error
 */
@@ -285,7 +289,7 @@ void intersection_clip_facet(double* polygon_pointer, int& vertex_nb, int curren
 	{
 		int j = seeds_neighbors[i];
 		int q;
-		if (tid == 0 && _i == 1 && i == 19)
+		if (tid == 0 && _i == 3 && i == 1)
 		{
 			for (q = 0; q < vertex_nb * 4; ++q)
 			{
@@ -295,7 +299,7 @@ void intersection_clip_facet(double* polygon_pointer, int& vertex_nb, int curren
 
 		if (current_seed != j)
 		{ 
-			if (tid == 0 && _i == 1 && i == 19)
+			if (tid == 0 && _i == 3 && i == 1)
 			{
 				test_index[42] = j;
 				test_index[43] = vertex_nb;
@@ -303,7 +307,7 @@ void intersection_clip_facet(double* polygon_pointer, int& vertex_nb, int curren
 			}
 			clip_by_plane(polygon_pointer, vertex_nb, polygon_buffer, polygon_buffer_nb, current_seed, j, seeds_pointer, seeds_nb, test_polygon, tid);
 			swap_polygons(polygon_pointer, vertex_nb, polygon_buffer, polygon_buffer_nb);
-			if (tid == 0 && _i == 1 && i == 19)
+			if (tid == 0 && _i == 3 && i == 1)
 			{
 				test_index[44] = vertex_nb;
 				test_index[45] = polygon_buffer_nb;
@@ -314,7 +318,7 @@ void intersection_clip_facet(double* polygon_pointer, int& vertex_nb, int curren
 			}
 		}
 	}
-	if (tid == 0 && _i == 1)
+	if (tid == 0 && _i == 3)
 	{
 		test_polygon[3] = current_seed_pos.x;
 		test_polygon[4] = current_seed_pos.y;
@@ -335,14 +339,15 @@ void intersection_clip_facet(double* polygon_pointer, int& vertex_nb, int curren
 /*
 	a thread to compute the RVD in parallel way
 */
-__global__ void compute_RVD(double* seeds_pointer, int seeds_nb, 
+__global__ 
+void compute_RVD(double* seeds_pointer, int seeds_nb, 
 							double* mesh_vertex,   int mesh_vertex_nb,
 							int* mesh_facet,    int mesh_facet_nb,
 							double* test_dis, double* test_centriod,
 							int* test_index)
 {
 	int tid = blockIdx.x * blockDim.x + threadIdx.x;
-
+	
 	//有多少个facet,开启多少个线程,用tid进行索引
 	if (tid < mesh_facet_nb){
 		//得到对应facet的三个索引
@@ -395,11 +400,77 @@ __global__ void compute_RVD(double* seeds_pointer, int seeds_nb,
 
 			intersection_clip_facet(polygon, vertex_nb, current_seed, seeds_pointer, seeds_nb,
 				test_index, test_dis, tid, i);
+			
+			//now we get the clipped polygon stored in "polygon"
+			//take care of the sychonize
+			//change the polygon data into "weight" and "position"
+			double weight;
+			double3 position;
+			
+			int v1 = 0;
+			int v2, v3;
 
-			if (tid == 0 && i == 0)
+			double3 pos1, pos2, pos3;
+			double d1, d2, d3;
+			int triangle_nb = vertex_nb - 2;
+
+			double total_weight = 0.0;
+			double3 centriodTimesWeight = { 0.0, 0.0, 0.0 };
+
+			double current_weight = 0.0;
+			double3 current_posTimesWeight = { 0.0, 0.0, 0.0 };
+
+			for (int i = 1; i < vertex_nb - 1; ++i)
+			{
+				v2 = i; v3 = i + 1;
+
+				pos1 = { polygon[v1 * 4 + 0], polygon[v1 * 4 + 1], polygon[v1 * 4 + 2] };
+				d1 = polygon[v1 * 4 + 3];
+
+				pos2 = { polygon[v2 * 4 + 0], polygon[v2 * 4 + 1], polygon[v2 * 4 + 2] };
+				d2 = polygon[v2 * 4 + 3];
+
+				pos3 = { polygon[v3 * 4 + 0], polygon[v3 * 4 + 1], polygon[v3 * 4 + 2] };
+				d3 = polygon[v3 * 4 + 3];
+
+				computeTriangleCentriod(pos1, pos2, pos3, d1, d2, d3, centriodTimesWeight, total_weight);
+
+				current_weight += total_weight;
+				current_posTimesWeight.x += centriodTimesWeight.x;
+				current_posTimesWeight.y += centriodTimesWeight.y;
+				current_posTimesWeight.z += centriodTimesWeight.z;
+
+				total_weight = 0.0;
+				centriodTimesWeight = { 0.0, 0.0, 0.0 };
+			}
+			
+			current_posTimesWeight.x /= current_weight;
+			current_posTimesWeight.y /= current_weight;
+			current_posTimesWeight.z /= current_weight;
+
+			current_weight /= triangle_nb;
+			
+			double3 temp_pos;
+			temp_pos.x = SeedsInformation[current_seed * 4 + 0];
+			temp_pos.y = SeedsInformation[current_seed * 4 + 1];
+			temp_pos.z = SeedsInformation[current_seed * 4 + 2];
+			double temp_weight = SeedsInformation[current_seed * 4 + 3] ;
+
+			temp_weight += current_weight;
+			temp_pos.x += current_posTimesWeight.x * current_weight;
+			temp_pos.y += current_posTimesWeight.x * current_weight;
+			temp_pos.z += current_posTimesWeight.x * current_weight;
+
+			atomicAdd(&SeedsInformation[current_seed * 4 + 0], temp_pos.x);
+			atomicAdd(&SeedsInformation[current_seed * 4 + 1], temp_pos.y);
+			atomicAdd(&SeedsInformation[current_seed * 4 + 2], temp_pos.z);
+			atomicAdd(&SeedsInformation[current_seed * 4 + 3], temp_weight);
+
+			/*------------------------ test part -------------------------*/
+			if (tid == 0 && i == 3)
 			{
 				test_index[20] = current_seed;
-
+				test_index[88] = vertex_nb;
 				/*for (int j = 0; j < vertex_nb * 4; ++j)
 				{
 					test_dis[j] = polygon[j];
@@ -449,6 +520,8 @@ extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_poi
 	double* host_test_cen = (double*)malloc(sizeof(double) * 3);
 	double* dev_test_center;
 
+	double* dev_seedsInformation;
+	
 	int* host_test_index = (int*)malloc(sizeof(int) * points_nb);
 	int* dev_test_index;
 
@@ -459,7 +532,7 @@ extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_poi
 	checkCudaErrors(cudaMalloc((void**)&dev_seeds_pointer, sizeof(double) * points_nb * 3));
 	checkCudaErrors(cudaMalloc((void**)&dev_mesh_vertex_pointer, sizeof(double) * mesh_vertex_nb * 3));
 	checkCudaErrors(cudaMalloc((void**)&dev_mesh_facet_index, sizeof(int) * mesh_facet_nb * 3));
-
+	checkCudaErrors(cudaMalloc((void**)&dev_seedsInformation, sizeof(double) * points_nb * 4));
 
 	//allocate test memory
 	checkCudaErrors(cudaMalloc((void**)&dev_test_dis, sizeof(double) * points_nb));
@@ -470,6 +543,8 @@ extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_poi
 	checkCudaErrors(cudaMemcpy(dev_seeds_pointer, host_seeds_pointer, sizeof(double) * points_nb * 3, cudaMemcpyHostToDevice));
 	checkCudaErrors(cudaMemcpy(dev_mesh_vertex_pointer, host_mesh_vertex_pointer, sizeof(double) * points_nb * 3, cudaMemcpyHostToDevice));
 	checkCudaErrors(cudaMemcpy(dev_mesh_facet_index, host_facet_index, sizeof(int) * points_nb * 3, cudaMemcpyHostToDevice));
+
+	checkCudaErrors(cudaMemcpyToSymbol(SeedsInformation, &dev_seedsInformation, sizeof(double*), size_t(0), cudaMemcpyHostToDevice));
 
 	int x = (int)sqrt(mesh_facet_nb);
 	int y = (int)(mesh_facet_nb / x + 1);
@@ -519,10 +594,6 @@ extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_poi
 		printf("x : %.17lf, y: %.17lf, z : %.17lf, w : %.6lf\n\n", host_test_dis[150 + i * 4 + 0], host_test_dis[150 + i * 4 + 1], host_test_dis[150 + i * 4 + 2], host_test_dis[150 + i * 4 + 3]);
 	}
 
+	printf("thread 1, facet 1, current seed : %d clipped polygon vertex number : %d\n",host_test_index[20], host_test_index[88]);
 	printf("successfully running!\n");
 }
-
-
-
-
-
