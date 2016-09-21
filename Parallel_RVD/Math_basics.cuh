@@ -52,4 +52,40 @@ double m_fabs(double x)
 	if (x > 0) return x;
 	else return -x;
 }
+
+__device__ 
+double computeTriangleArea(double3 p1, double3 p2, double3 p3)
+{
+	double a = computeDistance(p1, p2);
+	double b = computeDistance(p2, p3);
+	double c = computeDistance(p1, p3);
+
+	//Heron's Formula to compute the area of the triangle
+	double p = (a + b + c) / 2;
+	if (p >= a && p >= b && p >= c)
+		return sqrt(p * (p - a) * (p - b) * (p - c));
+	else
+		return 0.0;
+}
+
+__device__
+void computeTriangleCentriod(
+double3 p, double3 q, double3 r, double a, double b, double c,
+double3& Vg, double& V
+)
+{
+	double abc = a + b + c;
+	double area = computeTriangleArea(p, q, r);
+	V = area / 3 * abc;
+
+	double wp = a + abc;
+	double wq = b + abc;
+	double wr = c + abc;
+
+	double s = area / 12.0;
+	Vg.x = s * (wp * p.x + wq * q.x + wr * r.x);
+	Vg.y = s * (wp * p.y + wq * q.y + wr * r.y);
+	Vg.z = s * (wp * p.z + wq * q.z + wr * r.z);
+}
+
 #endif /* H_CUDA_BASCIS_H */
