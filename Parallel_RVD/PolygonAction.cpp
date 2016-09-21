@@ -43,8 +43,6 @@ namespace P_RVD
 	}
 
 
-
-
 	Vector3d PolygonAction::compute_center()
 	{
 		Vector3d center;
