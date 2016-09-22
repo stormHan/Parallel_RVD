@@ -124,13 +124,13 @@ namespace P_RVD
 					I.setSeed(vertex->getSeed());
 				}
 				_target.add_vertex(I);
-				printf("add I : %.17lf, %.17lf, %.17lf, %lf\n", I.getPosition().x, I.getPosition().y, I.getPosition().z, I.getWeight());
+				//printf("add I : %.17lf, %.17lf, %.17lf, %lf\n", I.getPosition().x, I.getPosition().y, I.getPosition().z, I.getWeight());
 			}
 
 			if (status > 0)
 			{
 				_target.add_vertex(*vertex);
-				printf("add vertex : %.17lf, %.17lf, %.17lf, %lf\n", vertex->getPosition().x, vertex->getPosition().y, vertex->getPosition().z, vertex->getWeight());
+				//printf("add vertex : %.17lf, %.17lf, %.17lf, %lf\n", vertex->getPosition().x, vertex->getPosition().y, vertex->getPosition().z, vertex->getWeight());
 			}
 			prev_vertex = vertex;
 			prev_vertex_position = vertex_position;
