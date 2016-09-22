@@ -13,6 +13,8 @@ namespace P_RVD
 
 		seedsUpdater.setSeedsNumber(p_Points->points_nb);
 		seedsUpdater.setPositionVector();
+
+		polygon_nb = std::vector<int>(p_Points->points_nb, 0);
 	}
 
 	Vector3d RestrictedVoronoiDiagram::computeCenter(const Vector3i index_triangle)
@@ -100,13 +102,20 @@ namespace P_RVD
 		{
 			Facet temp_facet = p_Mesh->meshFacets.getFacet(t);
 			current_center = computeCenter(temp_facet.m_v1, temp_facet.m_v2, temp_facet.m_v3);
-
+			if (t == 184)
+			{
+				face_begin = face_begin; 
+			}
 			current_near_points = findNearestPoints(current_center, seeds_n);
 
 			for (t_index i = 0; i < seeds_n; ++i)
 			{
 				current_seed = current_near_points[i];
-
+				if (current_seed == 7)
+				{
+					current_seed++;
+					current_seed--;
+				}
 				F.initialize_from_mesh_facet(p_Mesh, t);
 				
 				/*
@@ -124,7 +133,7 @@ namespace P_RVD
 				polygonHandler->setPolygon(current_polygon);
 				polygonHandler->compute_centriod();
 				
-
+				polygon_nb[current_seed]++;
 				/*
 					store the information of the polygon to the exact seed
 				*/
@@ -152,20 +161,20 @@ namespace P_RVD
 			//test the clip_by_plane's correctness
 			
 
-			printf("CPU :计算 %d 和 %d的半平面情况\n", seed, j);
-			printf("---------before---------\n");
-			printf("ping\n");
-			ping->show_polygon();
-			printf("pong\n");
-			pong->show_polygon();
+			//printf("CPU :计算 %d 和 %d的半平面情况\n", seed, j);
+			//printf("---------before---------\n");
+			//printf("ping\n");
+			//ping->show_polygon();
+			//printf("pong\n");
+			//pong->show_polygon();
 			clip_by_plane(*ping, *pong, seed, (t_index)j);
 			//swap ping and pong
 			swap_polygons(ping, pong);
-			printf("---------after----------\n");
-			printf("ping\n");
-			ping->show_polygon();
-			printf("pong\n");
-			pong->show_polygon();
+			//printf("---------after----------\n");
+			//printf("ping\n");
+			//ping->show_polygon();
+			//printf("pong\n");
+			//pong->show_polygon();
 		}
 		//swap the ping polygon and pong polygon
 		//the result must be stored in the ping polygons

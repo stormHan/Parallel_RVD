@@ -123,6 +123,8 @@ namespace P_RVD
 		*/
 		SeedStore seedsUpdater;
 
+		std::vector<int> polygon_nb;
+
 	};
 }
 
