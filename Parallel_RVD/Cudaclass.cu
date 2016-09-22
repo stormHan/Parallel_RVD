@@ -3,14 +3,19 @@
 #include "device_atomic_functions.h"
 
 #include "Math_basics.cuh"
+#include "AtomicAction.cuh"
 
 #include "Polygon.h"
 #include <iostream>
+#include <fstream>
 
+using namespace std;
 using namespace P_RVD;
 
 //set global variable to store the seeds' position and weight
 __device__ double* SeedsInformation;
+
+__device__ int* SeedsPolygon_nb;
 /*
 	process the cuda error
 */
@@ -21,6 +26,21 @@ inline void checkCudaErrors(cudaError err)
 		fprintf(stderr, "CUDA Runtime API error : %s.\n", cudaGetErrorString(err));
 		return;
 	}
+}
+
+__device__
+double MyAtomicAdd(double* address, double val)
+{
+	unsigned long long int* address_as_ull = (unsigned long long int*)address;
+
+	unsigned long long int old = *address_as_ull, assumed;
+
+	do{
+		assumed = old;
+		old = atomicCAS(address_as_ull, assumed, __double_as_longlong(val + __longlong_as_double(assumed)));
+	} while (assumed != old);
+
+	return __longlong_as_double(old);
 }
 
 /*
@@ -344,7 +364,8 @@ void compute_RVD(double* seeds_pointer, int seeds_nb,
 							double* mesh_vertex,   int mesh_vertex_nb,
 							int* mesh_facet,    int mesh_facet_nb,
 							double* test_dis, double* test_centriod,
-							int* test_index)
+							int* test_index, double* test_seeds,
+							int* test_polygon_nb)
 {
 	int tid = blockIdx.x * blockDim.x + threadIdx.x;
 	
@@ -404,6 +425,9 @@ void compute_RVD(double* seeds_pointer, int seeds_nb,
 			//now we get the clipped polygon stored in "polygon"
 			//take care of the sychonize
 			//change the polygon data into "weight" and "position"
+			if (vertex_nb == 0)
+				break;
+
 			double weight;
 			double3 position;
 			
@@ -443,34 +467,34 @@ void compute_RVD(double* seeds_pointer, int seeds_nb,
 				total_weight = 0.0;
 				centriodTimesWeight = { 0.0, 0.0, 0.0 };
 			}
-			
-			current_posTimesWeight.x /= current_weight;
-			current_posTimesWeight.y /= current_weight;
-			current_posTimesWeight.z /= current_weight;
 
-			current_weight /= triangle_nb;
-			
-			double3 temp_pos;
-			temp_pos.x = SeedsInformation[current_seed * 4 + 0];
-			temp_pos.y = SeedsInformation[current_seed * 4 + 1];
-			temp_pos.z = SeedsInformation[current_seed * 4 + 2];
-			double temp_weight = SeedsInformation[current_seed * 4 + 3] ;
+			atomicAdd(&SeedsPolygon_nb[current_seed], 1);
+			if (current_weight != 0 && triangle_nb > 0){
+				current_posTimesWeight.x /= current_weight;
+				current_posTimesWeight.y /= current_weight;
+				current_posTimesWeight.z /= current_weight;
 
-			temp_weight += current_weight;
-			temp_pos.x += current_posTimesWeight.x * current_weight;
-			temp_pos.y += current_posTimesWeight.x * current_weight;
-			temp_pos.z += current_posTimesWeight.x * current_weight;
+				current_weight /= triangle_nb;
 
-			atomicAdd(&SeedsInformation[current_seed * 4 + 0], temp_pos.x);
-			atomicAdd(&SeedsInformation[current_seed * 4 + 1], temp_pos.y);
-			atomicAdd(&SeedsInformation[current_seed * 4 + 2], temp_pos.z);
-			atomicAdd(&SeedsInformation[current_seed * 4 + 3], temp_weight);
+				double3 temp_pos;
+				
+				temp_pos.x = current_posTimesWeight.x * current_weight;
+				temp_pos.y = current_posTimesWeight.y * current_weight;
+				temp_pos.z = current_posTimesWeight.z * current_weight;
 
+				MyAtomicAdd(&SeedsInformation[current_seed * 4 + 0], temp_pos.x);
+				MyAtomicAdd(&SeedsInformation[current_seed * 4 + 1], temp_pos.y);
+				MyAtomicAdd(&SeedsInformation[current_seed * 4 + 2], temp_pos.z);
+				MyAtomicAdd(&SeedsInformation[current_seed * 4 + 3], current_weight);
+
+				
+			}
 			/*------------------------ test part -------------------------*/
 			if (tid == 0 && i == 3)
 			{
-				test_index[20] = current_seed;
-				test_index[88] = vertex_nb;
+				test_index[1] = 7777;
+				test_index[2] = current_seed;
+				test_index[3] = vertex_nb;
 				/*for (int j = 0; j < vertex_nb * 4; ++j)
 				{
 					test_dis[j] = polygon[j];
@@ -480,23 +504,39 @@ void compute_RVD(double* seeds_pointer, int seeds_nb,
 					seeds_pointer[current_seed * 3 + 1],
 					seeds_pointer[current_seed * 3 + 2] };
 
-				test_dis[0] = current_seed_pos.x;
-				test_dis[1] = current_seed_pos.y;
-				test_dis[2] = current_seed_pos.z;
+				//test_dis[0] = current_seed_pos.x;
+				//test_dis[1] = current_seed_pos.y;
+				//test_dis[2] = current_seed_pos.z;
 			}
 		}
 		
-
+		__syncthreads();
 		//pass the data to test data
-		if (tid == 0)
+		if (tid == 180)
 		{
-			test_centriod[0] = centriod.x;
-			test_centriod[1] = centriod.y;
-			test_centriod[2] = centriod.z;
+			test_centriod[0] = v1.x;
+			test_centriod[1] = v1.y;
+			test_centriod[2] = v1.z;
+			test_centriod[3] = v2.x;
+			test_centriod[4] = v2.y;
+			test_centriod[5] = v2.z;
+			test_centriod[6] = v3.x;
+			test_centriod[7] = v3.y;
+			test_centriod[8] = v3.z;
 
 			for (int i = 0; i < 20; ++i)
 			{
 				test_index[i] = nearest_points[i];
+			}
+
+			for (int i = 0; i < seeds_nb * 4; ++i)
+			{
+				test_seeds[i] = SeedsInformation[i];
+			}
+
+			for (int i = 0; i < seeds_nb; ++i)
+			{
+				test_polygon_nb[i] = SeedsPolygon_nb[i];
 			}
 		}
 
@@ -504,7 +544,6 @@ void compute_RVD(double* seeds_pointer, int seeds_nb,
 		free(polygon);
 	}
 }
-
 
 extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_pointer,
 	int* host_facet_index, int points_nb, int mesh_vertex_nb, int mesh_facet_nb)
@@ -521,10 +560,16 @@ extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_poi
 	double* dev_test_center;
 
 	double* dev_seedsInformation;
-	
+	int* dev_seedsPolyonNumber;
+
 	int* host_test_index = (int*)malloc(sizeof(int) * points_nb);
 	int* dev_test_index;
 
+	double* host_test_seeds = (double*)malloc(sizeof(double) * points_nb * 4);
+	double* dev_test_seeds;
+
+	int* host_test_polygon = (int*)malloc(sizeof(int) * points_nb);
+	int* dev_test_polygon;
 
 	checkCudaErrors(cudaSetDevice(0));
 	
@@ -533,11 +578,14 @@ extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_poi
 	checkCudaErrors(cudaMalloc((void**)&dev_mesh_vertex_pointer, sizeof(double) * mesh_vertex_nb * 3));
 	checkCudaErrors(cudaMalloc((void**)&dev_mesh_facet_index, sizeof(int) * mesh_facet_nb * 3));
 	checkCudaErrors(cudaMalloc((void**)&dev_seedsInformation, sizeof(double) * points_nb * 4));
+	checkCudaErrors(cudaMalloc((void**)&dev_seedsPolyonNumber, sizeof(int) * points_nb));
 
 	//allocate test memory
 	checkCudaErrors(cudaMalloc((void**)&dev_test_dis, sizeof(double) * points_nb));
 	checkCudaErrors(cudaMalloc((void**)&dev_test_center, sizeof(double) * 3));
 	checkCudaErrors(cudaMalloc((void**)&dev_test_index, sizeof(int) * points_nb));
+	checkCudaErrors(cudaMalloc((void**)&dev_test_seeds, sizeof(double) * points_nb * 4));
+	checkCudaErrors(cudaMalloc((void**)&dev_test_polygon, sizeof(int) * points_nb));
 
 	//pass the data from host to device
 	checkCudaErrors(cudaMemcpy(dev_seeds_pointer, host_seeds_pointer, sizeof(double) * points_nb * 3, cudaMemcpyHostToDevice));
@@ -545,55 +593,83 @@ extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_poi
 	checkCudaErrors(cudaMemcpy(dev_mesh_facet_index, host_facet_index, sizeof(int) * points_nb * 3, cudaMemcpyHostToDevice));
 
 	checkCudaErrors(cudaMemcpyToSymbol(SeedsInformation, &dev_seedsInformation, sizeof(double*), size_t(0), cudaMemcpyHostToDevice));
-
+	checkCudaErrors(cudaMemcpyToSymbol(SeedsPolygon_nb, &dev_seedsPolyonNumber, sizeof(int*), size_t(0), cudaMemcpyHostToDevice));
+	
 	int x = (int)sqrt(mesh_facet_nb);
 	int y = (int)(mesh_facet_nb / x + 1);
 	//set the block
 	compute_RVD << < x, y >> >(dev_seeds_pointer, points_nb, dev_mesh_vertex_pointer, mesh_vertex_nb, dev_mesh_facet_index, mesh_facet_nb,
-		dev_test_dis, dev_test_center, dev_test_index);
+		dev_test_dis, dev_test_center, dev_test_index, dev_test_seeds, dev_test_polygon);
 
 	checkCudaErrors(cudaMemcpy(host_test_dis, dev_test_dis, sizeof(double) * points_nb, cudaMemcpyDeviceToHost));
 	checkCudaErrors(cudaMemcpy(host_test_cen, dev_test_center, sizeof(double) * 3, cudaMemcpyDeviceToHost));
 	checkCudaErrors(cudaMemcpy(host_test_index, dev_test_index, sizeof(int) * points_nb, cudaMemcpyDeviceToHost));
+	checkCudaErrors(cudaMemcpy(host_test_seeds, dev_test_seeds, sizeof(double) * points_nb * 4, cudaMemcpyDeviceToHost));
+	checkCudaErrors(cudaMemcpy(host_test_polygon, dev_test_polygon, sizeof(int) * points_nb, cudaMemcpyDeviceToHost));
+	//printf("Thread 1:\n");
+	//printf("center position : %.17lf, %.17lf, %.17lf \n", host_test_cen[0], host_test_cen[1], host_test_cen[2]);
+	//printf("nearest 20 points' index:\n");
+	//for (int i = 0; i < 20; ++i)
+	//{
+	//	printf("%d  : %d  \n",i, host_test_index[i]);
+	//}
+	//printf("current seed : %d\n", host_test_index[41]);
+	//printf("current seed position : %.17lf, %.17lf, %.17lf \n", host_test_dis[3], host_test_dis[4], host_test_dis[5]);
 
+	//printf("the 20 seeds near the current seed\n");
+	//for (int i = 0; i < 20; ++i)
+	//{
+	//	printf("%d  : %d  \n",i, host_test_index[i + 21]);
+	//}
 
-	printf("Thread 1:\n");
-	printf("center position : %.17lf, %.17lf, %.17lf \n", host_test_cen[0], host_test_cen[1], host_test_cen[2]);
-	printf("nearest 20 points' index:\n");
+	//printf(" %d 和 %d 确定平面\n", host_test_index[41], host_test_index[42]);
+	//printf("原polygon:\n");
+	//printf("vertex number : %d\n", host_test_index[43]);
+
+	//for (int i = 0; i < host_test_index[43]; ++i)
+	//{
+	//	printf("x : %.17lf, y: %.17lf, z : %.17lf, w : %.6lf\n\n", host_test_dis[6 + i * 4 + 0], host_test_dis[6 + i * 4 + 1], host_test_dis[6 + i * 4 + 2], host_test_dis[6 + i * 4 + 3]);
+	//}
+	//printf("现polygon:\n");
+	//printf("vertex number : %d   buffer vertex number : %d\n", host_test_index[44], host_test_index[45]);
+	//for (int i = 0; i < host_test_index[44]; ++i)
+	//{
+	//	printf("x : %.17lf, y: %.17lf, z : %.17lf, w : %.6lf\n\n", host_test_dis[101 + i * 4 + 0], host_test_dis[101 + i * 4 + 1], host_test_dis[101 + i * 4 + 2], host_test_dis[101 + i * 4 + 3]);
+	//}
+
+	//printf("增加的点\n");
+	//for (int i = 0; i < 4; ++i)
+	//{
+	//	printf("x : %.17lf, y: %.17lf, z : %.17lf, w : %.6lf\n\n", host_test_dis[150 + i * 4 + 0], host_test_dis[150 + i * 4 + 1], host_test_dis[150 + i * 4 + 2], host_test_dis[150 + i * 4 + 3]);
+	//}
+
+	//printf("thread 1, facet 1, current seed : %d clipped polygon vertex number : %d\n",host_test_index[20], host_test_index[88]);
+	//printf("successfully running!\n");
+
+	ofstream fout("c.txt");
+	printf("test : %d current seed :%d  vertex number : %d\n",host_test_index[1], host_test_index[2], host_test_index[3]);
+	fout << "seed 185  nearest points" << endl;
 	for (int i = 0; i < 20; ++i)
 	{
-		printf("%d  : %d  \n",i, host_test_index[i]);
+		fout << host_test_index[i] << endl;
 	}
-	printf("current seed : %d\n", host_test_index[41]);
-	printf("current seed position : %.17lf, %.17lf, %.17lf \n", host_test_dis[3], host_test_dis[4], host_test_dis[5]);
+	fout << "v1 : " << host_test_dis[0] << host_test_dis[1] << host_test_dis[2] << endl;
+	fout << "v2 : " << host_test_dis[0] << host_test_dis[1] << host_test_dis[2] << endl;
+	fout << "v2 : " << host_test_dis[0] << host_test_dis[1] << host_test_dis[2] << endl;
 
-	printf("the 20 seeds near the current seed\n");
-	for (int i = 0; i < 20; ++i)
+	for (int i = 0; i < points_nb; ++i)
 	{
-		printf("%d  : %d  \n",i, host_test_index[i + 21]);
+		if (host_test_seeds[i * 4 + 3] != 0){
+			host_test_seeds[i * 4 + 0] /= host_test_seeds[i * 4 + 3];
+			host_test_seeds[i * 4 + 1] /= host_test_seeds[i * 4 + 3];
+			host_test_seeds[i * 4 + 2] /= host_test_seeds[i * 4 + 3];
+		}
+		//printf("seeds %d : %.16lf, %.16lf, %.16lf, , %.16lf \n", i, host_test_seeds[i * 4 + 0]
+			//, host_test_seeds[i * 4 + 1], host_test_seeds[i * 4 + 2], host_test_seeds[i * 4 + 3]);
+		//fout << i << ':' << host_test_seeds[i * 4 + 0] << ' ' << host_test_seeds[i * 4 + 1] << ' ' << host_test_seeds[i * 4 + 2] << ' ' << host_test_seeds[i * 4 + 3] << endl;
 	}
-
-	printf(" %d 和 %d 确定平面\n", host_test_index[41], host_test_index[42]);
-	printf("原polygon:\n");
-	printf("vertex number : %d\n", host_test_index[43]);
-
-	for (int i = 0; i < host_test_index[43]; ++i)
+	for (int i = 0; i < points_nb; ++i)
 	{
-		printf("x : %.17lf, y: %.17lf, z : %.17lf, w : %.6lf\n\n", host_test_dis[6 + i * 4 + 0], host_test_dis[6 + i * 4 + 1], host_test_dis[6 + i * 4 + 2], host_test_dis[6 + i * 4 + 3]);
+		//fout << i << ':' << host_test_polygon[i] << endl;
 	}
-	printf("现polygon:\n");
-	printf("vertex number : %d   buffer vertex number : %d\n", host_test_index[44], host_test_index[45]);
-	for (int i = 0; i < host_test_index[44]; ++i)
-	{
-		printf("x : %.17lf, y: %.17lf, z : %.17lf, w : %.6lf\n\n", host_test_dis[101 + i * 4 + 0], host_test_dis[101 + i * 4 + 1], host_test_dis[101 + i * 4 + 2], host_test_dis[101 + i * 4 + 3]);
-	}
-
-	printf("增加的点\n");
-	for (int i = 0; i < 4; ++i)
-	{
-		printf("x : %.17lf, y: %.17lf, z : %.17lf, w : %.6lf\n\n", host_test_dis[150 + i * 4 + 0], host_test_dis[150 + i * 4 + 1], host_test_dis[150 + i * 4 + 2], host_test_dis[150 + i * 4 + 3]);
-	}
-
-	printf("thread 1, facet 1, current seed : %d clipped polygon vertex number : %d\n",host_test_index[20], host_test_index[88]);
-	printf("successfully running!\n");
 }
