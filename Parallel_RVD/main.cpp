@@ -131,8 +131,8 @@ int main(int argc, char** argv)
 	
 
 	long t1 = clock();
-	runCuda(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
-		M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber());
+	//runCuda(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
+	//  M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber());
 
 	printf("GPU running time : %lfms\n", (double)(clock() - t1));
 
