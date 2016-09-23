@@ -76,7 +76,7 @@ double3& Vg, double& V
 {
 	double abc = a + b + c;
 	double area = computeTriangleArea(p, q, r);
-	V = area / 3 * abc;
+	V = area / 3.0 * abc;
 
 	double wp = a + abc;
 	double wq = b + abc;
