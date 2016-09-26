@@ -100,7 +100,7 @@ namespace P_RVD
 		*/
 		for (t_index t = face_begin; t < face_end; ++t)
 		{
-			printf(" ------ facet %d --------\n", t);
+			//printf(" ------ facet %d --------\n", t);
 			Facet temp_facet = p_Mesh->meshFacets.getFacet(t);
 			current_center = computeCenter(temp_facet.m_v1, temp_facet.m_v2, temp_facet.m_v3);
 			if (t == 185)
@@ -112,11 +112,7 @@ namespace P_RVD
 			for (t_index i = 0; i < seeds_n; ++i)
 			{
 				current_seed = current_near_points[i];
-				/*if (current_seed == 7)
-				{
-					current_seed++;
-					current_seed--;
-				}*/
+				
 				F.initialize_from_mesh_facet(p_Mesh, t);
 				
 				/*
