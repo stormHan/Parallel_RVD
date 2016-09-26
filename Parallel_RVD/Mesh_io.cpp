@@ -26,7 +26,7 @@ namespace P_RVD
 				fscanf(file, "%lf %lf %lf", &vertex.x, &vertex.y, &vertex.z);
 				_M.meshVertices.addPoint(vertex);
 			}
-
+			 
 			if (strcmp(lineHeader, "vt") == 0 && hasVt != true)
 				hasVt = true;
 
@@ -48,7 +48,7 @@ namespace P_RVD
 				}
 				else if (hasVn || hasVt)
 				{
-					int matched = fscanf(file, "%d/%d %d/%d %d/%d", &t_vIndex.x, &t_vtIndex.x, &t_vIndex.y, &t_vtIndex.y,
+					int matched = fscanf(file, "%d//%d %d//%d %d//%d", &t_vIndex.x, &t_vtIndex.x, &t_vIndex.y, &t_vtIndex.y,
 						&t_vIndex.z, &t_vtIndex.z);
 					if (matched != 6)
 					{
