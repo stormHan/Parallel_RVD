@@ -112,7 +112,7 @@ void findNearestPoints(double3 centriod, double* seeds_pointer, int seeds_nb, in
 
 		}
 	}
-	for (int i = 0; i < 20; ++i)
+	for (int i = 0; i < nearest_points_nb; ++i)
 	{
 		nearest_points[i] = index[i];
 	}
@@ -133,8 +133,6 @@ output: polygon pong and its number
 __device__
 void clip_by_plane(double* ping, int& ping_nb, double* pong, int& pong_nb, int seed_i, int seed_j, double* seeds_pointer, int seeds_nb)
 {
-	//test 
-	int index = 150;
 	//reset the pong
 	pong_nb = 0;
 
@@ -307,10 +305,10 @@ void intersection_clip_facet(double* polygon_pointer, int& vertex_nb, int curren
 __global__ 
 void compute_RVD(double* seeds_pointer, int seeds_nb,
 double* mesh_vertex, int mesh_vertex_nb,
-int* mesh_facet, int mesh_facet_nb, double* ret_seeds
-/*double* test_dis, double* test_centriod,
+int* mesh_facet, int mesh_facet_nb, double* ret_seeds,
+double* test_dis, double* test_centriod,
 int* test_index, double* test_seeds,
-int* test_polygon_nb*/)
+int* test_polygon_nb)
 {
 	int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -375,8 +373,8 @@ int* test_polygon_nb*/)
 			double weight;
 			double3 position;
 
-			int v1 = 0;
-			int v2, v3;
+			int _v1 = 0;
+			int _v2, _v3;
 
 			double3 pos1, pos2, pos3;
 			double d1, d2, d3;
@@ -390,16 +388,16 @@ int* test_polygon_nb*/)
 
 			for (int i = 1; i < vertex_nb - 1; ++i)
 			{
-				v2 = i; v3 = i + 1;
+				_v2 = i; _v3 = i + 1;
 
-				pos1 = { polygon[v1 * 4 + 0], polygon[v1 * 4 + 1], polygon[v1 * 4 + 2] };
-				d1 = polygon[v1 * 4 + 3];
+				pos1 = { polygon[_v1 * 4 + 0], polygon[_v1 * 4 + 1], polygon[_v1 * 4 + 2] };
+				d1 = polygon[_v1 * 4 + 3];
 
-				pos2 = { polygon[v2 * 4 + 0], polygon[v2 * 4 + 1], polygon[v2 * 4 + 2] };
-				d2 = polygon[v2 * 4 + 3];
+				pos2 = { polygon[_v2 * 4 + 0], polygon[_v2 * 4 + 1], polygon[_v2 * 4 + 2] };
+				d2 = polygon[_v2 * 4 + 3];
 
-				pos3 = { polygon[v3 * 4 + 0], polygon[v3 * 4 + 1], polygon[v3 * 4 + 2] };
-				d3 = polygon[v3 * 4 + 3];
+				pos3 = { polygon[_v3 * 4 + 0], polygon[_v3 * 4 + 1], polygon[_v3 * 4 + 2] };
+				d3 = polygon[_v3 * 4 + 3];
 
 				computeTriangleCentriod(pos1, pos2, pos3, d1, d2, d3, centriodTimesWeight, total_weight);
 
@@ -434,28 +432,28 @@ int* test_polygon_nb*/)
 
 			}
 			/*------------------------ test part -------------------------*/
-			//__syncthreads();
-			//pass the data to test data
-			/*
-		if (tid == 162)
-		{
+			if (tid == 0 && i == 0)
+			{
+				test_index[0] = current_seed;
+				for (int i = 0; i < 20; ++i)
+				{
+					test_index[i + 1] = nearest_points[i];
+				}
 
-		for (int i = 0; i < 20; ++i)
-		{
-		test_index[i] = nearest_points[i];
-		}
+				test_dis[0] = v1.x;
+				test_dis[1] = v1.y;
+				test_dis[2] = v1.z;
+				test_dis[3] = v2.x;
+				test_dis[4] = v2.y;
+				test_dis[5] = v2.z;
+				test_dis[6] = v3.x;
+				test_dis[7] = v3.y;
+				test_dis[8] = v3.z;
+			}
 
-
-
-		for (int i = 0; i < seeds_nb; ++i)
-		{
-		test_polygon_nb[i] = SeedsPolygon_nb[i];
-		}
-		}
-		*/
 		}
 		__syncthreads();
-		for (int i = 0; i < seeds_nb * 4; ++i)
+		for (int i = 0; i < 100; ++i)
 		{
 			ret_seeds[i] = SeedsInformation[i];
 		}
@@ -472,10 +470,10 @@ extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_poi
 
 	double* dev_seedsInformation;
 
-	double* host_test_seeds = (double*)malloc(sizeof(double) * points_nb * 4);
+	double* host_test_seeds = (double*)malloc(sizeof(double) *  points_nb * 4);
 	double* dev_test_seeds;
 	//test data
-	/*
+	
 	double* host_test_dis = (double*)malloc(sizeof(double) * points_nb);
 	double* dev_test_dis;
 
@@ -489,27 +487,29 @@ extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_poi
 
 	int* host_test_polygon = (int*)malloc(sizeof(int) * points_nb);
 	int* dev_test_polygon;
-	*/
+	
 	checkCudaErrors(cudaSetDevice(0));
 	
 	//allocate the memory
 	checkCudaErrors(cudaMalloc((void**)&dev_seeds_pointer, sizeof(double) * points_nb * 3));
 	checkCudaErrors(cudaMalloc((void**)&dev_mesh_vertex_pointer, sizeof(double) * mesh_vertex_nb * 3));
-	checkCudaErrors(cudaMalloc((void**)&dev_mesh_facet_index, sizeof(int) * mesh_facet_nb * 3));
-	checkCudaErrors(cudaMalloc((void**)&dev_seedsInformation, sizeof(double) * points_nb * 4));
+ 	checkCudaErrors(cudaMalloc((void**)&dev_mesh_facet_index, sizeof(int) * mesh_facet_nb * 3));
+ 	checkCudaErrors(cudaMalloc((void**)&dev_seedsInformation, sizeof(double) * points_nb * 4));
 	//checkCudaErrors(cudaMalloc((void**)&dev_seedsPolyonNumber, sizeof(int) * points_nb));
 	checkCudaErrors(cudaMalloc((void**)&dev_test_seeds, sizeof(double) * points_nb * 4));
+
+
 	//allocate test memory
-	/*
+
 	checkCudaErrors(cudaMalloc((void**)&dev_test_dis, sizeof(double) * points_nb));
 	checkCudaErrors(cudaMalloc((void**)&dev_test_center, sizeof(double) * 3));
 	checkCudaErrors(cudaMalloc((void**)&dev_test_index, sizeof(int) * points_nb));
 	
 	checkCudaErrors(cudaMalloc((void**)&dev_test_polygon, sizeof(int) * points_nb));
-	*/
+	
 	//pass the data from host to device
 	checkCudaErrors(cudaMemcpy(dev_seeds_pointer, host_seeds_pointer, sizeof(double) * points_nb * 3, cudaMemcpyHostToDevice));
-	checkCudaErrors(cudaMemcpy(dev_mesh_vertex_pointer, host_mesh_vertex_pointer, sizeof(double) * points_nb * 3, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(dev_mesh_vertex_pointer, host_mesh_vertex_pointer, sizeof(double) * mesh_vertex_nb * 3, cudaMemcpyHostToDevice));
 	checkCudaErrors(cudaMemcpy(dev_mesh_facet_index, host_facet_index, sizeof(int) * mesh_facet_nb * 3, cudaMemcpyHostToDevice));
 
 	checkCudaErrors(cudaMemcpyToSymbol(SeedsInformation, &dev_seedsInformation, sizeof(double*), size_t(0), cudaMemcpyHostToDevice));
@@ -518,22 +518,26 @@ extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_poi
 	int x = (int)sqrt(mesh_facet_nb);
 	int y = (int)(mesh_facet_nb / x + 1);
 	//set the block
-	compute_RVD << < x, y >> >(dev_seeds_pointer, points_nb, dev_mesh_vertex_pointer, mesh_vertex_nb, dev_mesh_facet_index, mesh_facet_nb, dev_test_seeds
-		/*dev_test_dis, dev_test_center, dev_test_index, dev_test_seeds, dev_test_polygon*/);
-	/*
+	compute_RVD << < x, y >> >(dev_seeds_pointer, points_nb, dev_mesh_vertex_pointer, mesh_vertex_nb, dev_mesh_facet_index, mesh_facet_nb, dev_test_seeds,
+		dev_test_dis, dev_test_center, dev_test_index, dev_test_seeds, dev_test_polygon);
+	
+	checkCudaErrors(cudaDeviceSynchronize());
+
 	checkCudaErrors(cudaMemcpy(host_test_dis, dev_test_dis, sizeof(double) * points_nb, cudaMemcpyDeviceToHost));
 	checkCudaErrors(cudaMemcpy(host_test_cen, dev_test_center, sizeof(double) * 3, cudaMemcpyDeviceToHost));
 	checkCudaErrors(cudaMemcpy(host_test_index, dev_test_index, sizeof(int) * points_nb, cudaMemcpyDeviceToHost));
 	checkCudaErrors(cudaMemcpy(host_test_polygon, dev_test_polygon, sizeof(int) * points_nb, cudaMemcpyDeviceToHost));
-	*/
+	
 	checkCudaErrors(cudaMemcpy(host_test_seeds, dev_test_seeds, sizeof(double) * points_nb * 4, cudaMemcpyDeviceToHost));
-	//printf("Thread 1:\n");
-	//printf("center position : %.17lf, %.17lf, %.17lf \n", host_test_cen[0], host_test_cen[1], host_test_cen[2]);
-	//printf("nearest 20 points' index:\n");
-	//for (int i = 0; i < 20; ++i)
-	//{
-	//	printf("%d  : %d  \n",i, host_test_index[i]);
-	//}
+	printf("Thread 1:\n");
+	printf("v1 : %.6lf, %.6lf, %.6lf \n", host_test_dis[0], host_test_dis[1], host_test_dis[2]);
+	printf("v2 : %.6lf, %.6lf, %.6lf \n", host_test_dis[3], host_test_dis[4], host_test_dis[5]);
+	printf("v3 : %.6lf, %.6lf, %.6lf \n", host_test_dis[6], host_test_dis[7], host_test_dis[8]);
+	printf("nearest 20 points' index:\n");
+	for (int i = 0; i < 20; ++i)
+	{
+		printf("%d  : %d  \n",i, host_test_index[i + 1]);
+	}
 	//printf("current seed : %d\n", host_test_index[41]);
 	//printf("current seed position : %.17lf, %.17lf, %.17lf \n", host_test_dis[3], host_test_dis[4], host_test_dis[5]);
 
