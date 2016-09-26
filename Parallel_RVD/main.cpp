@@ -19,6 +19,11 @@
 #include "Glut_generator.h"
 #include "DrawGraphics.h"
 
+// in/out put
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+
 #include "RVD.h"
 
 #define WINDOWS_WIDTH 1000
@@ -37,6 +42,9 @@ Mesh M_in;
 extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_pointer,
 	int* host_facet_index, int points_nb, int mesh_vertex_nb, int mesh_facet_number);
 
+/*
+	renderring part
+*/
 void RenderCB(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -121,18 +129,40 @@ int main(int argc, char** argv)
 		trans the data from host to device
 	*/
 	double* host_points = NULL;
-
+	
 	trans_points(points, host_points);
 
+
+	//-------end test----------
 	double* host_mesh_vertex = NULL;
 	int* host_facet_index = NULL;
 
 	trans_mesh(M_in, host_mesh_vertex, host_facet_index);
 	
 
+	// --------test-------------
+	std::ofstream fileout("test.txt");
+
+	for (int i = 0; i < points.getPointsNumber(); ++i)
+	{
+		
+		fileout << "Point " << i << ": " << host_points[i * 3 + 0] << " "
+			<< host_points[i * 3 + 1] << "  "
+			<< host_points[i * 3 + 2] << "  "
+			<< std::endl;
+	}
+
+	for (int i = 0; i < M_in.meshFacets.getFacetsNumber(); ++i)
+	{
+		fileout << "Facet" << i << ": " << host_facet_index[i * 3 + 0] << "  "
+			<< host_facet_index[i * 3 + 1] << " "
+			<< host_facet_index[i * 3 + 2] << " "
+			<< std::endl;
+	}
+
 	long t1 = clock();
-	//runCuda(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
-	//  M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber());
+	runCuda(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
+	  M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber());
 
 	printf("GPU running time : %lfms\n", (double)(clock() - t1));
 
@@ -142,7 +172,7 @@ int main(int argc, char** argv)
 	*/
 	long t2 = clock();
 	RestrictedVoronoiDiagram *m_RVD = new RestrictedVoronoiDiagram(&M_in, &points_out);
-	m_RVD->compute_RVD();
+	//m_RVD->compute_RVD();
 	printf("CPU running time : %lfms\n", (double)(clock() - t2));
 
 	/*
