@@ -71,6 +71,7 @@ __device__ double3 computeCentriod(double3 a, double3 b, double3 c)
 __device__
 void findNearestPoints(double3 centriod, double* seeds_pointer, int seeds_nb, int* nearest_points, int nearest_points_nb)
 {
+	seeds_nb = 115;
 	double* distance_from_centroid = (double*)malloc(sizeof(double) * seeds_nb);
 
 	//find the nearest points
@@ -78,8 +79,13 @@ void findNearestPoints(double3 centriod, double* seeds_pointer, int seeds_nb, in
 	{
 		double3 seeds_pos = { seeds_pointer[i * 3 + 0], seeds_pointer[i * 3 + 1], seeds_pointer[i * 3 + 2] };
 		distance_from_centroid[i] = computeDistance(centriod, seeds_pos);
+		
 	}
-
+	double* test = (double*)malloc(sizeof(double) * 100);
+	test[0] = 0.01;
+	free(test);
+	free(distance_from_centroid);
+	return;
 	//设置一个数组来存储下标
 	int* index = (int*)malloc(sizeof(int) * seeds_nb);
 	for (int i = 0; i < seeds_nb; ++i)
@@ -109,7 +115,6 @@ void findNearestPoints(double3 centriod, double* seeds_pointer, int seeds_nb, in
 				index[j + 1] = store_index;
 				break;
 			}
-
 		}
 	}
 	for (int i = 0; i < nearest_points_nb; ++i)
@@ -336,9 +341,35 @@ int* test_polygon_nb)
 
 		double3 centriod = computeCentriod(v1, v2, v3);
 
+		
 		int* nearest_points = (int*)malloc(sizeof(int) * 20);
 
 		findNearestPoints(centriod, seeds_pointer, seeds_nb, nearest_points, 20);
+
+		if (tid == 0)
+		{
+			test_dis[0] = v1.x;
+			test_dis[1] = v1.y;
+			test_dis[2] = v1.z;
+			test_dis[3] = v2.x;
+			test_dis[4] = v2.y;
+			test_dis[5] = v2.z;
+			test_dis[6] = v3.x;
+			test_dis[7] = v3.y;
+			test_dis[8] = v3.z;
+
+			test_centriod[0] = centriod.x;
+			test_centriod[1] = centriod.y;
+			test_centriod[2] = centriod.z;
+
+			test_index[21] = seeds_nb;
+
+			for (int i = 0; i < 20; ++i)
+			{
+				test_index[i] = nearest_points[i];
+			}
+		}
+		return;
 
 		double* polygon = (double*)malloc(sizeof(double) * 10 * 4);
 		int vertex_nb;
@@ -530,14 +561,17 @@ extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_poi
 	
 	checkCudaErrors(cudaMemcpy(host_test_seeds, dev_test_seeds, sizeof(double) * points_nb * 4, cudaMemcpyDeviceToHost));
 	printf("Thread 1:\n");
+	printf("centriod : %.6lf, %.6lf, %.6lf \n", host_test_cen[0], host_test_cen[1], host_test_cen[2]);
+	printf("seeds_nb : %d \n", host_test_index[21]);
 	printf("v1 : %.6lf, %.6lf, %.6lf \n", host_test_dis[0], host_test_dis[1], host_test_dis[2]);
 	printf("v2 : %.6lf, %.6lf, %.6lf \n", host_test_dis[3], host_test_dis[4], host_test_dis[5]);
 	printf("v3 : %.6lf, %.6lf, %.6lf \n", host_test_dis[6], host_test_dis[7], host_test_dis[8]);
 	printf("nearest 20 points' index:\n");
 	for (int i = 0; i < 20; ++i)
 	{
-		printf("%d  : %d  \n",i, host_test_index[i + 1]);
+		printf("%d  : %d  \n",i, host_test_index[i]);
 	}
+	return;
 	//printf("current seed : %d\n", host_test_index[41]);
 	//printf("current seed position : %.17lf, %.17lf, %.17lf \n", host_test_dis[3], host_test_dis[4], host_test_dis[5]);
 
