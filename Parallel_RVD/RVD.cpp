@@ -100,13 +100,10 @@ namespace P_RVD
 		*/
 		for (t_index t = face_begin; t < face_end; ++t)
 		{
-			//printf(" ------ facet %d --------\n", t);
+			printf(" ------ facet %d --------\n", t);
 			Facet temp_facet = p_Mesh->meshFacets.getFacet(t);
 			current_center = computeCenter(temp_facet.m_v1, temp_facet.m_v2, temp_facet.m_v3);
-			if (t == 185)
-			{
-				face_begin = face_begin; 
-			}
+			
 			current_near_points = findNearestPoints(current_center, seeds_n);
 
 			for (t_index i = 0; i < seeds_n; ++i)

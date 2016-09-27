@@ -172,7 +172,7 @@ int main(int argc, char** argv)
 	*/
 	long t2 = clock();
 	RestrictedVoronoiDiagram *m_RVD = new RestrictedVoronoiDiagram(&M_in, &points_out);
-	//m_RVD->compute_RVD();
+	m_RVD->compute_RVD();
 	printf("CPU running time : %lfms\n", (double)(clock() - t2));
 
 	/*
