@@ -123,6 +123,7 @@ int main(int argc, char** argv)
 
 	/*
 		…Ë÷√Kdtree
+		Create the tree
 	*/
 
 	/*
@@ -141,7 +142,7 @@ int main(int argc, char** argv)
 	
 
 	// --------test-------------
-	std::ofstream fileout("test.txt");
+	/*std::ofstream fileout("test.txt");
 
 	for (int i = 0; i < points.getPointsNumber(); ++i)
 	{
@@ -158,7 +159,7 @@ int main(int argc, char** argv)
 			<< host_facet_index[i * 3 + 1] << " "
 			<< host_facet_index[i * 3 + 2] << " "
 			<< std::endl;
-	}
+	}*/
 
 	long t1 = clock();
 	runCuda(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
