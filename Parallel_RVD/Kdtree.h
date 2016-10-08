@@ -54,7 +54,7 @@ namespace P_RVD{
 			*/
 		void Create_kdtree(std::vector<Kd_tree_point> &pts, int max_levels = 99);
 
-		void Search(const Kd_tree_point &query, int *ret_index, float *ret_sq_dist);
+		void Search(const Kd_tree_point &query, int *ret_index, double *ret_sq_dist);
 		int GetNumNodes() const { return m_id; }
 		KDNode* GetRoot() const { return m_root; }
 
@@ -69,9 +69,9 @@ namespace P_RVD{
 		int m_id; // current node ID
 
 		void Split(KDNode *cur, KDNode *left, KDNode *right);
-		void SearchAtNode(KDNode *cur, const Kd_tree_point &query, int *ret_index, float *ret_dist, KDNode **ret_node);
-		void SearchAtNodeRange(KDNode *cur, const Kd_tree_point &query, float range, int *ret_index, float *ret_dist);
-		inline float Distance(const Kd_tree_point &a, const Kd_tree_point &b) const;
+		void SearchAtNode(KDNode *cur, const Kd_tree_point &query, int *ret_index, double *ret_dist, KDNode **ret_node);
+		void SearchAtNodeRange(KDNode *cur, const Kd_tree_point &query, double range, int *ret_index, double *ret_dist);
+		inline double DistanceSquare(const Kd_tree_point &a, const Kd_tree_point &b) const;
 	};
 }
 #endif /* H_KDTREE_H */
