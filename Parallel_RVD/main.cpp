@@ -19,6 +19,9 @@
 #include "Glut_generator.h"
 #include "DrawGraphics.h"
 
+//kdtree
+#include "Kdtree.h"
+
 // in/out put
 #include <iostream>
 #include <fstream>
