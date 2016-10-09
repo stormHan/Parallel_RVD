@@ -21,6 +21,7 @@
 
 //kdtree
 #include "Kdtree.h"
+#include "CUDA_KDtree.h"
 
 // in/out put
 #include <iostream>
@@ -165,8 +166,8 @@ int main(int argc, char** argv)
 	}*/
 
 	long t1 = clock();
-	runCuda(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
-	  M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber());
+	//runCuda(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
+	//  M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber());
 
 	printf("GPU running time : %lfms\n", (double)(clock() - t1));
 
@@ -176,7 +177,7 @@ int main(int argc, char** argv)
 	*/
 	long t2 = clock();
 	RestrictedVoronoiDiagram *m_RVD = new RestrictedVoronoiDiagram(&M_in, &points_out);
-	m_RVD->compute_RVD();
+	//m_RVD->compute_RVD();
 	printf("CPU running time : %lfms\n", (double)(clock() - t2));
 
 	/*
