@@ -7,6 +7,8 @@
 #define H_CUDA_KDTREE_H
 
 #include "Kdtree.h"
+#include "Mesh.h"
+#include "Math_basics.h"
 #include <vector>
 
 namespace P_RVD
@@ -35,7 +37,13 @@ namespace P_RVD
 	public:
 		~CUDA_KDTree();
 		void CreateKDtree(KDNode *root, int num_nodes, const std::vector<Kd_tree_point> &data);
+		
+		/*
+			the search data : queries
+		*/
 		void Search(const std::vector<Kd_tree_point> &queries, std::vector<int> &indexes, std::vector<double> &dists);
+
+		void Search(const Mesh &query_mesh, std::vector<int> &indexes, std::vector<double> &dists);
 
 	private:
 		CUDA_KDNode *m_gpu_nodes;
