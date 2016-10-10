@@ -129,6 +129,26 @@ int main(int argc, char** argv)
 		…Ë÷√Kdtree
 		Create the tree
 	*/
+	KDtree tree;
+	CUDA_KDTree GPU_tree;
+	const int maxTreeLevel = 13; // play ground with this value to get the best result
+
+	std::vector<Kd_tree_point> data(points.getPointsNumber());
+	for (t_index i = 0; i < data.size(); ++i)
+	{
+		Vector3d temp = points.getPoint(i);
+		data[i].coords[0] = temp.x;
+		data[i].coords[1] = temp.y;
+		data[i].coords[2] = temp.z;
+	}
+
+	std::vector<int> gpu_indexes;
+	std::vector<double> gpu_dists;
+
+	tree.Create_kdtree(data, maxTreeLevel);
+	GPU_tree.CreateKDtree(tree.GetRoot(), tree.GetNumNodes(), data);
+	GPU_tree.Search(M_in, gpu_indexes, gpu_dists);
+
 
 	/*
 		trans the data from host to device
