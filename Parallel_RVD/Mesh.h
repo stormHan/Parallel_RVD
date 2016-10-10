@@ -41,6 +41,9 @@ namespace P_RVD
 		t_index m_v1;
 		t_index m_v2;
 		t_index m_v3;
+
+		std::vector<int> nearest_points;
+		
 	};
 
 	class Mesh;
