@@ -133,6 +133,7 @@ namespace P_RVD{
 		std::sort(cur->index.begin(), cur->index.end(), KDtree::SortPoints);
 
 		int mid = cur->index[cur->index.size() / 2];
+		cur->split_value = pts[mid].coords[m_current_axis];
 
 		left->parent = cur;
 		right->parent = cur;
