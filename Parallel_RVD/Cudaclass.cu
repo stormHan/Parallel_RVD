@@ -311,7 +311,7 @@ __global__
 void compute_RVD(double* seeds_pointer, int seeds_nb,
 double* mesh_vertex, int mesh_vertex_nb,
 int* mesh_facet, int mesh_facet_nb, double* ret_seeds,
-double* test_dis~, double* test_centriod,
+double* test_dis, double* test_centriod,
 int* test_index, double* test_seeds,
 int* test_polygon_nb)
 {
