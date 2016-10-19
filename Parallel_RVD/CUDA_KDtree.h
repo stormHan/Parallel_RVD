@@ -45,6 +45,12 @@ namespace P_RVD
 
 		void Search(const Mesh &query_mesh, std::vector<int> &indexes, std::vector<double> &dists);
 
+		/*
+		the result vector indexex and dists is depend on the number of the queries and k
+		the size of indexes and dists is n * k
+		*/
+		void Search_knn(const std:: vector<Kd_tree_point> &queries, std::vector<int> &indexes, std::vector<double> &dists, int k);
+
 	private:
 		CUDA_KDNode *m_gpu_nodes;
 		int *m_gpu_indexes;
