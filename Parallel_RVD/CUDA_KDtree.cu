@@ -174,6 +174,202 @@ namespace P_RVD{
 		*ret_dist = best_dist;
 	}
 
+	__device__ void SearchAtNode_knn(const CUDA_KDNode *nodes, const int *indexes, const Kd_tree_point *pts, int cur, const Kd_tree_point &query, int *ret_index, float *ret_dist, int *ret_node, int k)
+	{
+		int neighbor_nb = 0;
+
+
+		//travasel to the nodes
+		while (true)
+		{
+			int split_axis = nodes[cur].level % KDTREE_DIM;
+
+			if (nodes[cur].left == -1){
+				//Get to the leaf node
+
+				neighbor_nb += nodes[cur].num_indexes;
+				while (neighbor_nb < k)
+				{
+					cur = nodes[cur].parent;
+					neighbor_nb = nodes[cur].num_indexes;
+				}
+				*ret_node = cur;
+
+				//Now we get enough neighbors in cur node
+				int *temp_index = (int*)malloc(sizeof(int) * nodes[cur].num_indexes);
+				float *temp_dists = (float*)malloc(sizeof(float) * nodes[cur].num_indexes);
+
+				for (int i = 0; i < nodes[cur].num_indexes; ++i)
+				{
+					temp_index[i] = indexes[nodes[cur].indexes + i];
+					temp_dists[i] = Distance(query, pts[temp_index[i]]);
+				}
+
+				int n = nodes[cur].num_indexes;
+				//利用k次冒泡得到前小的距离
+				int best_idx = 0;
+				double best_dist = FLT_MAX;
+				for (int i = 0; i < k; ++i)
+				{
+					for (int j = i; j < n; ++j)
+					{
+						if (temp_dists[j] < best_dist)
+						{
+							best_dist = temp_dists[j];
+							best_idx = temp_index[j];
+
+							temp_dists[j] = temp_dists[i];
+							temp_index[j] = temp_index[i];
+
+							temp_index[i] = best_idx;
+							temp_dists[i] = best_dist;
+						}
+					}
+
+					ret_index[i] = best_idx;
+					ret_dist[i] = best_dist;
+
+					best_idx = 0;
+					best_dist = FLT_MAX;
+				}
+				break;
+			}
+			else if (query.coords[split_axis] < nodes[cur].split_value){
+				cur = nodes[cur].left;
+			}
+			else{
+				cur = nodes[cur].right;
+			}
+		}
+
+	}
+
+	__device__ void SearchAtiNodeRange_knn(const CUDA_KDNode *nodes, const int *indexes, const Kd_tree_point *pts, const Kd_tree_point &query, int cur, double range, int* &ret_index, double* &ret_dist, int k)
+	{
+		// Goes through all the nodes that within "radius"
+		int to_visit[10];
+		int to_visit_pos = 0;
+
+		to_visit[to_visit_pos++] = cur;
+
+		while (to_visit_pos){
+			int next_search[10];
+			int next_search_pos = 0;
+
+			while (to_visit_pos){
+				cur = to_visit[to_visit_pos - 1];
+				to_visit_pos--;
+
+				int split_axis = nodes[cur].level % KDTREE_DIM;
+
+				//already get to the leaf
+				if (nodes[cur].left == -1){
+					for (int i = 0; i < nodes[cur].num_indexes; ++i)
+					{
+						int idx = indexes[nodes[cur].indexes + i];
+						float d = Distance(query, pts[idx]);
+
+						for (int j = 0; j < k; ++j)
+						{
+
+							if (d < ret_dist[j])
+							{
+								for (int q = k - 1; q > j; --q)
+								{
+									ret_index[q] = ret_index[q - 1];
+									ret_dist[q] = ret_dist[q - 1];
+								}
+								ret_index[j] = idx;
+								ret_dist[j] = d;
+								break;
+							}
+						}
+					}
+				}
+				else{
+					double d = query.coords[split_axis] - nodes[cur].split_value;
+
+					// There are 3 possible scenarios
+					// The hypercircle only intersects the left region
+					// The hypercircle only intersects the right region
+					// The hypercricle intersects both
+
+					if (fabs(d) > range) {
+						if (d < 0)
+							next_search[next_search_pos++] = nodes[cur].left;
+						else
+							next_search[next_search_pos++] = nodes[cur].right;
+					}
+					else {
+						next_search[next_search_pos++] = nodes[cur].left;
+						next_search[next_search_pos++] = nodes[cur].right;
+					}
+				}
+			}
+			// No memcpy available??
+			for (int i = 0; i < next_search_pos; i++)
+				to_visit[i] = next_search[i];
+
+			to_visit_pos = next_search_pos;
+		}
+	}
+
+
+	__device__ void Search_knn(const CUDA_KDNode *nodes, const int *indexes, const Kd_tree_point *pts, const Kd_tree_point &query, int *ret_index, double *ret_dist, int k)
+	{
+		// Find the first closest node, this will be the upper bound for the next searches
+		int best_node = 0;
+		int* k_idx = (int*)malloc(sizeof(int) * k);
+		double* k_dist = (double*)malloc(sizeof(float) * k);
+		double radius = 0;
+
+		SearchAtNode_knn(nodes, indexes, pts, 0 /* root */, query, k_idx, k_dist, &best_node, k);
+
+		radius = sqrt(k_dist[k - 1]);
+
+		//Now find other posiible candidates
+		int cur = best_node;
+
+		while (nodes[cur].parent != -1)
+		{
+			int parent = nodes[cur].parent;
+			int split_axis = nodes[cur].level % KDTREE_DIM;
+
+			//Search the other node
+
+			if (fabs(nodes[parent].split_value - query.coords[split_axis]) <= radius)
+			{
+
+				if (nodes[parent].left != cur)
+					SearchAtiNodeRange_knn(nodes, indexes, pts, query, nodes[parent].left, radius, k_idx, k_dist, k);
+				else
+					SearchAtiNodeRange_knn(nodes, indexes, pts, query, nodes[parent].right, radius, k_idx, k_dist, k);
+
+			}
+			cur = parent;
+		}
+
+		for (int i = 0; i < k; ++i)
+		{
+			ret_index[i] = k_idx[i];
+			ret_dist[i] = k_dist[i];
+		}
+		free(k_idx);
+		free(k_dist);
+	}
+
+
+	__global__ void SearchBatch_knn(const CUDA_KDNode *nodes, const int *indexes, const Kd_tree_point *pts, int num_pts, Kd_tree_point *queries, int num_queries, int *ret_index, float *ret_dist, int k)
+	{
+		int idx = blockIdx.x*blockDim.x + threadIdx.x;
+
+		if (idx >= num_queries)
+			return;
+
+		//test(nodes, indexes, pts, queries[idx], &ret_index[idx * k], &ret_dist[idx * k], k);
+		Search_knn(nodes, indexes, pts, queries[idx], &ret_index[idx * k], &ret_dist[idx * k], k);
+	}
+
 	__global__ void SearchBatch(const CUDA_KDNode *nodes, const int *indexes, const Kd_tree_point *pts, int num_pts, Kd_tree_point *queries, int num_queries, int *ret_index, double *ret_dist)
 	{
 		int idx = blockIdx.x*blockDim.x + threadIdx.x;
@@ -282,7 +478,7 @@ namespace P_RVD{
 		CheckCUDAError("Search");
 
 		cudaMemcpy(&indexes[0], gpu_ret_indexes, sizeof(int)*queries.size(), cudaMemcpyDeviceToHost);
-		cudaMemcpy(&dists[0], gpu_ret_dist, sizeof(float)*queries.size(), cudaMemcpyDeviceToHost);
+		cudaMemcpy(&dists[0], gpu_ret_dist, sizeof(double)*queries.size(), cudaMemcpyDeviceToHost);
 
 		cudaFree(gpu_queries);
 		cudaFree(gpu_ret_indexes);
@@ -341,6 +537,45 @@ namespace P_RVD{
 		cudaFree(gpu_queries);
 		cudaFree(gpu_ret_indexes);
 		cudaFree(gpu_ret_dist);
+
+	}
+
+	void CUDA_KDTree::Search_knn(const std::vector<Kd_tree_point> &queries, std::vector<int> &indexes, std::vector<double> &dists, int k)
+	{
+		int threads = 512;
+		int blocks = queries.size() / threads + ((queries.size() % threads) ? 1 : 0);
+
+		Kd_tree_point *gpu_queries;
+		int *gpu_ret_indexes;
+		double *gpu_ret_dist;
+
+		indexes.resize(queries.size() * k);
+		dists.resize(queries.size() * k);
+
+		cudaMalloc((void**)&gpu_queries, sizeof(double) * queries.size() * KDTREE_DIM);
+		cudaMalloc((void**)&gpu_ret_indexes, sizeof(int) * k * queries.size());
+		cudaMalloc((void**)&gpu_ret_dist, sizeof(double) * k * queries.size());
+		CheckCUDAError("Initialize the gpu pointer");
+
+		//copy the query data
+		cudaMemcpy(gpu_queries, &queries[0], sizeof(double) * queries.size() * KDTREE_DIM, cudaMemcpyHostToDevice);
+		CheckCUDAError("Copy the data");
+
+		printf("Cuda blocks / threads : %d %d", blocks, threads);
+
+		SearchBatch_knn << < blocks, threads >> >(m_gpu_nodes, m_gpu_indexes, m_gpu_points, m_num_points, gpu_queries, queries.size(), gpu_ret_indexes, gpu_ret_dist, k);
+		//cudaThreadSynchronize();
+
+		CheckCUDAError("kernel function");
+
+		//Copy back the data from GPU
+		cudaMemcpy(&indexes[0], gpu_ret_indexes, sizeof(int) * queries.size() * k, cudaMemcpyDeviceToHost);
+		cudaMemcpy(&dists[0], gpu_ret_dist, sizeof(double) * k * queries.size(), cudaMemcpyDeviceToHost);
+		CheckCUDAError("Copy back the data from GPU");
+
+		cudaFree(gpu_queries);
+		cudaFree(gpu_ret_dist);
+		cudaFree(gpu_ret_indexes);
 
 	}
 }
