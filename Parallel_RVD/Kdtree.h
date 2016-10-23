@@ -57,6 +57,7 @@ namespace P_RVD{
 		void Search(const Kd_tree_point &query, int *ret_index, double *ret_sq_dist);
 		int GetNumNodes() const { return m_id; }
 		KDNode* GetRoot() const { return m_root; }
+		int GetLevel() const { return m_levels; }
 
 		static bool SortPoints(const int a, const int b);
 
