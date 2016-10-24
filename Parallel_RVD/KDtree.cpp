@@ -87,8 +87,8 @@ namespace P_RVD{
 
 						//Claer current index
 						{
-							std::vector<int> dummy;
-							node->index.swap(dummy);
+							//std::vector<int> dummy;
+							//node->index.swap(dummy);
 						}
 
 						node->left = left;
