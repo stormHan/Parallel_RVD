@@ -2,6 +2,7 @@
 #include <cuda_runtime.h>
 #include <cstdio>
 
+#define CUDA_STACK 100
 
 namespace P_RVD{
 
@@ -62,7 +63,7 @@ namespace P_RVD{
 	}
 
 
-	__device__ void cudaSearchAtNodeRange(const CUDA_KDNode *nodes, const int *indexes, const Kd_tree_point *pts, const Kd_tree_point &query, int cur, float range, int *ret_index, double *ret_dist)
+	__device__ void cudaSearchAtNodeRange(const CUDA_KDNode *nodes, const int *indexes, const Kd_tree_point *pts, const Kd_tree_point &query, int cur, double range, int *ret_index, double *ret_dist)
 	{
 		// Goes through all the nodes that are within "range"
 
@@ -71,13 +72,13 @@ namespace P_RVD{
 
 		// Ok, we don't have nice STL vectors to use, and we can't dynamically allocate memory with CUDA??
 		// We'll use a fixed length stack, increase this as required
-		int to_visit[100];
+		int to_visit[CUDA_STACK];
 		int to_visit_pos = 0;
 
 		to_visit[to_visit_pos++] = cur;
 
 		while (to_visit_pos) {
-			int next_search[100];
+			int next_search[CUDA_STACK];
 			int next_search_pos = 0;
 
 			while (to_visit_pos) {
@@ -174,7 +175,7 @@ namespace P_RVD{
 		*ret_dist = best_dist;
 	}
 
-	__device__ void SearchAtNode_knn(const CUDA_KDNode *nodes, const int *indexes, const Kd_tree_point *pts, int cur, const Kd_tree_point &query, int *ret_index, float *ret_dist, int *ret_node, int k)
+	__device__ void SearchAtNode_knn(const CUDA_KDNode *nodes, const int *indexes, const Kd_tree_point *pts, int cur, const Kd_tree_point &query, int *ret_index, double *ret_dist, int *ret_node, int k)
 	{
 		int neighbor_nb = 0;
 
@@ -197,7 +198,7 @@ namespace P_RVD{
 
 				//Now we get enough neighbors in cur node
 				int *temp_index = (int*)malloc(sizeof(int) * nodes[cur].num_indexes);
-				float *temp_dists = (float*)malloc(sizeof(float) * nodes[cur].num_indexes);
+				double *temp_dists = (double*)malloc(sizeof(double) * nodes[cur].num_indexes);
 
 				for (int i = 0; i < nodes[cur].num_indexes; ++i)
 				{
@@ -247,13 +248,13 @@ namespace P_RVD{
 	__device__ void SearchAtiNodeRange_knn(const CUDA_KDNode *nodes, const int *indexes, const Kd_tree_point *pts, const Kd_tree_point &query, int cur, double range, int* &ret_index, double* &ret_dist, int k)
 	{
 		// Goes through all the nodes that within "radius"
-		int to_visit[10];
+		int to_visit[CUDA_STACK];
 		int to_visit_pos = 0;
 
 		to_visit[to_visit_pos++] = cur;
 
 		while (to_visit_pos){
-			int next_search[10];
+			int next_search[CUDA_STACK];
 			int next_search_pos = 0;
 
 			while (to_visit_pos){
@@ -267,7 +268,7 @@ namespace P_RVD{
 					for (int i = 0; i < nodes[cur].num_indexes; ++i)
 					{
 						int idx = indexes[nodes[cur].indexes + i];
-						float d = Distance(query, pts[idx]);
+						double d = Distance(query, pts[idx]);
 
 						for (int j = 0; j < k; ++j)
 						{
@@ -320,7 +321,7 @@ namespace P_RVD{
 		// Find the first closest node, this will be the upper bound for the next searches
 		int best_node = 0;
 		int* k_idx = (int*)malloc(sizeof(int) * k);
-		double* k_dist = (double*)malloc(sizeof(float) * k);
+		double* k_dist = (double*)malloc(sizeof(double) * k);
 		double radius = 0;
 
 		SearchAtNode_knn(nodes, indexes, pts, 0 /* root */, query, k_idx, k_dist, &best_node, k);
@@ -333,18 +334,18 @@ namespace P_RVD{
 		while (nodes[cur].parent != -1)
 		{
 			int parent = nodes[cur].parent;
-			int split_axis = nodes[cur].level % KDTREE_DIM;
+			int split_axis = nodes[parent].level % KDTREE_DIM;
 
 			//Search the other node
 
 			if (fabs(nodes[parent].split_value - query.coords[split_axis]) <= radius)
 			{
-
+				
 				if (nodes[parent].left != cur)
 					SearchAtiNodeRange_knn(nodes, indexes, pts, query, nodes[parent].left, radius, k_idx, k_dist, k);
 				else
 					SearchAtiNodeRange_knn(nodes, indexes, pts, query, nodes[parent].right, radius, k_idx, k_dist, k);
-
+					
 			}
 			cur = parent;
 		}
@@ -359,7 +360,7 @@ namespace P_RVD{
 	}
 
 
-	__global__ void SearchBatch_knn(const CUDA_KDNode *nodes, const int *indexes, const Kd_tree_point *pts, int num_pts, Kd_tree_point *queries, int num_queries, int *ret_index, float *ret_dist, int k)
+	__global__ void SearchBatch_knn(const CUDA_KDNode *nodes, const int *indexes, const Kd_tree_point *pts, int num_pts, Kd_tree_point *queries, int num_queries, int *ret_index, double *ret_dist, int k)
 	{
 		int idx = blockIdx.x*blockDim.x + threadIdx.x;
 
@@ -387,18 +388,18 @@ namespace P_RVD{
 		cudaFree(m_gpu_points);
 	}
 
-	void CUDA_KDTree::CreateKDtree(KDNode *root, int num_nodes, const std::vector<Kd_tree_point> &data)
+	void CUDA_KDTree::CreateKDtree(KDNode *root, int num_nodes, const std::vector<Kd_tree_point> &data, int max_level)
 	{
 		m_num_points = data.size();
 
 		cudaMalloc((void**)&m_gpu_nodes, sizeof(CUDA_KDNode) * num_nodes);
-		cudaMalloc((void**)&m_gpu_indexes, sizeof(int) * m_num_points);
+		cudaMalloc((void**)&m_gpu_indexes, sizeof(int) * m_num_points * (max_level + 1));
 		cudaMalloc((void**)&m_gpu_points, sizeof(Kd_tree_point) * m_num_points);
 
 		CheckCUDAError("CreateKDtree");
 
 		std::vector <CUDA_KDNode> cpu_nodes(num_nodes);
-		std::vector <int> indexes(m_num_points);
+		std::vector <int> indexes(m_num_points * (max_level + 1));
 		std::vector <KDNode*> to_visit;
 
 		int cur_pos = 0;
@@ -577,5 +578,59 @@ namespace P_RVD{
 		cudaFree(gpu_ret_dist);
 		cudaFree(gpu_ret_indexes);
 
+	}
+
+	void CUDA_KDTree::Search_knn(const Mesh &query_mesh, std::vector<int> &indexes, std::vector<double> &dists, int k)
+	{
+		int threads = 512;
+		int blocks = query_mesh.meshFacets.getFacetsNumber() / threads + ((query_mesh.meshFacets.getFacetsNumber() % threads) ? 1 : 0);
+
+		std::vector<Kd_tree_point> queries(query_mesh.meshFacets.getFacetsNumber());
+		//algorithm 1 compute the centriod of a triangle in cpu
+		for (int i = 0; i < query_mesh.meshFacets.getFacetsNumber(); ++i)
+		{
+			Facet temp_f = query_mesh.meshFacets.getFacet(i);
+
+			Vector3d p1 = query_mesh.meshVertices.getPoint(temp_f.m_v1);
+			Vector3d p2 = query_mesh.meshVertices.getPoint(temp_f.m_v2);
+			Vector3d p3 = query_mesh.meshVertices.getPoint(temp_f.m_v3);
+
+			Vector3d center = Math::computeCenter(p1, p2, p3);
+			queries[i].coords[0] = center.x;
+			queries[i].coords[1] = center.y;
+			queries[i].coords[2] = center.z;
+		}
+
+		Kd_tree_point *gpu_queries;
+		int *gpu_ret_indexes;
+		double *gpu_ret_dist;
+
+		indexes.resize(queries.size() * k);
+		dists.resize(queries.size() * k);
+
+		cudaMalloc((void**)&gpu_queries, sizeof(double) * queries.size() * KDTREE_DIM);
+		cudaMalloc((void**)&gpu_ret_indexes, sizeof(int) * k * queries.size());
+		cudaMalloc((void**)&gpu_ret_dist, sizeof(double) * k * queries.size());
+		CheckCUDAError("Initialize the gpu pointer");
+
+		//copy the query data
+		cudaMemcpy(gpu_queries, &queries[0], sizeof(double) * queries.size() * KDTREE_DIM, cudaMemcpyHostToDevice);
+		CheckCUDAError("Copy the data");
+
+		printf("Cuda blocks / threads : %d %d", blocks, threads);
+
+		SearchBatch_knn << < blocks, threads >> >(m_gpu_nodes, m_gpu_indexes, m_gpu_points, m_num_points, gpu_queries, queries.size(), gpu_ret_indexes, gpu_ret_dist, k);
+		//cudaThreadSynchronize();
+
+		CheckCUDAError("kernel function");
+
+		//Copy back the data from GPU
+		cudaMemcpy(&indexes[0], gpu_ret_indexes, sizeof(int) * queries.size() * k, cudaMemcpyDeviceToHost);
+		cudaMemcpy(&dists[0], gpu_ret_dist, sizeof(double) * k * queries.size(), cudaMemcpyDeviceToHost);
+		CheckCUDAError("Copy back the data from GPU");
+
+		cudaFree(gpu_queries);
+		cudaFree(gpu_ret_dist);
+		cudaFree(gpu_ret_indexes);
 	}
 }
