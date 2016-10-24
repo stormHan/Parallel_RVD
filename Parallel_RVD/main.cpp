@@ -146,8 +146,8 @@ int main(int argc, char** argv)
 	std::vector<double> gpu_dists;
 
 	tree.Create_kdtree(data, maxTreeLevel);
-	GPU_tree.CreateKDtree(tree.GetRoot(), tree.GetNumNodes(), data);
-	GPU_tree.Search(M_in, gpu_indexes, gpu_dists);
+	GPU_tree.CreateKDtree(tree.GetRoot(), tree.GetNumNodes(), data, tree.GetLevel());
+	GPU_tree.Search_knn(M_in, gpu_indexes, gpu_dists, 10);
 
 
 	/*
@@ -166,7 +166,14 @@ int main(int argc, char** argv)
 	
 
 	// --------test-------------
-	/*std::ofstream fileout("test.txt");
+	std::ofstream fileout("test.txt");
+	for (int i = 0; i < gpu_indexes.size(); ++i)
+	{
+		fileout << "Nearest Point " << i << ": " << gpu_indexes[i] << " "
+			<< gpu_dists[i] << "  "
+			<< std::endl;
+	}
+	/*
 
 	for (int i = 0; i < points.getPointsNumber(); ++i)
 	{
@@ -197,7 +204,7 @@ int main(int argc, char** argv)
 	*/
 	long t2 = clock();
 	RestrictedVoronoiDiagram *m_RVD = new RestrictedVoronoiDiagram(&M_in, &points_out);
-	//m_RVD->compute_RVD();
+	m_RVD->compute_RVD();
 	printf("CPU running time : %lfms\n", (double)(clock() - t2));
 
 	/*
