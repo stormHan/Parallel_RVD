@@ -36,7 +36,7 @@ namespace P_RVD
 	{
 	public:
 		~CUDA_KDTree();
-		void CreateKDtree(KDNode *root, int num_nodes, const std::vector<Kd_tree_point> &data);
+		void CreateKDtree(KDNode *root, int num_nodes, const std::vector<Kd_tree_point> &data, int max_level);
 		
 		/*
 			the search data : queries
@@ -50,6 +50,8 @@ namespace P_RVD
 		the size of indexes and dists is n * k
 		*/
 		void Search_knn(const std:: vector<Kd_tree_point> &queries, std::vector<int> &indexes, std::vector<double> &dists, int k);
+
+		void Search_knn(const Mesh &query_mesh, std::vector<int> &indexed, std::vector<double> &dists, int k);
 
 	private:
 		CUDA_KDNode *m_gpu_nodes;
