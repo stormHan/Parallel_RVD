@@ -2,7 +2,7 @@
 #include <cuda_runtime.h>
 #include <cstdio>
 
-#define CUDA_STACK 100
+#define CUDA_STACK 1000
 
 namespace P_RVD{
 
