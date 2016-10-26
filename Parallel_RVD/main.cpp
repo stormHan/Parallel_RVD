@@ -35,6 +35,8 @@
 
 using namespace P_RVD;
 
+#define KNN
+
 GraphicsDrawer* m_GraphicsDrawer = new GraphicsDrawer();
 Points p_in, p_out;
 Mesh M_in;
@@ -42,9 +44,21 @@ Mesh M_in;
 /*
 	call the cuda function
 	pass the data to the device
+
+	this 
+	without knn
 */
 extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_pointer,
 	int* host_facet_index, int points_nb, int mesh_vertex_nb, int mesh_facet_number);
+
+/*
+	call this cuda function after you've got 
+	the nearest neighbors
+*/
+
+extern "C" void runRVD(double* host_seeds_pointer, double* host_mesh_vertex_pointer,
+	int* host_facet_index, int points_nb, int mesh_vertex_nb, int mesh_facet_nb,
+	std::vector<int> facet_center_neigbors, std::vector<int> seeds_neighbors);
 
 /*
 	renderring part
@@ -142,13 +156,13 @@ int main(int argc, char** argv)
 		data[i].coords[2] = temp.z;
 	}
 
-	std::vector<int> gpu_indexes;
-	std::vector<double> gpu_dists;
+	std::vector<int> facet_neighbors_indexes, seeds_neighbors_indexes;
+	std::vector<double> facet_neighbors_dists, seeds_neighbors_dists;
 
 	tree.Create_kdtree(data, maxTreeLevel);
 	GPU_tree.CreateKDtree(tree.GetRoot(), tree.GetNumNodes(), data, tree.GetLevel());
-	GPU_tree.Search_knn(M_in, gpu_indexes, gpu_dists, 10);
-
+	GPU_tree.Search_knn(M_in, facet_neighbors_indexes, facet_neighbors_dists, 10);
+	GPU_tree.Search_knn(data, seeds_neighbors_indexes, seeds_neighbors_dists, 10);
 
 	/*
 		trans the data from host to device
@@ -166,36 +180,25 @@ int main(int argc, char** argv)
 	
 
 	// --------test-------------
-	std::ofstream fileout("test.txt");
-	for (int i = 0; i < gpu_indexes.size(); ++i)
-	{
-		fileout << "Nearest Point " << i << ": " << gpu_indexes[i] << " "
-			<< gpu_dists[i] << "  "
-			<< std::endl;
-	}
-	/*
-
-	for (int i = 0; i < points.getPointsNumber(); ++i)
-	{
-		
-		fileout << "Point " << i << ": " << host_points[i * 3 + 0] << " "
-			<< host_points[i * 3 + 1] << "  "
-			<< host_points[i * 3 + 2] << "  "
-			<< std::endl;
-	}
-
-	for (int i = 0; i < M_in.meshFacets.getFacetsNumber(); ++i)
-	{
-		fileout << "Facet" << i << ": " << host_facet_index[i * 3 + 0] << "  "
-			<< host_facet_index[i * 3 + 1] << " "
-			<< host_facet_index[i * 3 + 2] << " "
-			<< std::endl;
-	}*/
+	//std::ofstream fileout("test.txt");
+	
 
 	long t1 = clock();
-	//runCuda(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
-	//  M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber());
 
+#ifdef  KNN
+
+	freopen("out", "w", stdout);
+	runRVD(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
+		M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber(), facet_neighbors_indexes, seeds_neighbors_indexes);
+
+#else
+
+	runCuda(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
+		M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber());
+
+#endif //  KNN
+
+	
 	printf("GPU running time : %lfms\n", (double)(clock() - t1));
 
 	
@@ -210,7 +213,7 @@ int main(int argc, char** argv)
 	/*
 		Set the Windows
 		Use the GLUT lib
-	*/
+	*/  
 	GLUTBackendInit(argc, argv, true, false);
 	GLUTBackendCreateWindow(WINDOWS_WIDTH, WINDOWS_HEIGHT, false, "Rvd");
 
