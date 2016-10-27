@@ -280,13 +280,14 @@ void swap_polygons(double* ping, int& ping_nb, double* pong, int& pong_nb)
 /*
 */
 __device__
-void intersection_clip_facet_with_knn(double* polygon_pointer, int& vertex_nb, int current_seed, double* seeds_pointer, int seeds_nb, int *seeds_neighbor_index, int k)
+void intersection_clip_facet_with_knn(double* polygon_pointer, int& vertex_nb, int current_seed, double* seeds_pointer, int seeds_nb, int *seeds_neighbor_index, int k
+, int tid, int pass)
 {
 	
 	//set a buffer pointer to store the polygon
-	double* polygon_buffer = (double*)malloc(sizeof(double) * 10 * 4);
+	double polygon_buffer[40];
 	int polygon_buffer_nb = 0;
-
+	
 	for (int i = 0; i < k; ++i)
 	{
 		int j = seeds_neighbor_index[current_seed * k + i];
@@ -296,8 +297,7 @@ void intersection_clip_facet_with_knn(double* polygon_pointer, int& vertex_nb, i
 			swap_polygons(polygon_pointer, vertex_nb, polygon_buffer, polygon_buffer_nb);
 		}
 	}
-
-	free(polygon_buffer);
+	return;
 }
 
 /*
@@ -364,7 +364,7 @@ int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_
 		mesh_vertex[facet_index.z * 3 + 1],
 		mesh_vertex[facet_index.z * 3 + 2] };
 
-	double* polygon = (double*)malloc(sizeof(double) * 10 * 4);
+	double polygon[40];
 	int vertex_nb;
 
 	/*
@@ -385,9 +385,25 @@ int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_
 		polygon[0] = v1.x; polygon[1] = v1.y; polygon[2] = v1.z; polygon[3] = 1.0;
 		polygon[4] = v2.x; polygon[5] = v2.y; polygon[6] = v2.z; polygon[7] = 1.0;
 		polygon[8] = v3.x; polygon[9] = v3.y; polygon[10] = v3.z; polygon[11] = 1.0;
+		
+		intersection_clip_facet_with_knn(polygon, vertex_nb, current_seed, seeds_pointer, seeds_nb, seeds_neighbor_index, k, tid, i);
 
-		intersection_clip_facet_with_knn(polygon, vertex_nb, current_seed, seeds_pointer, seeds_nb, seeds_neighbor_index, k);
+		/*if (tid == 0 & i == 2)
+		{
+			for (int m = 0; m < seeds_nb * 4; ++m)
+				ret_seeds[m] = m;
+			ret_seeds[0] = v1.x;
+			ret_seeds[1] = v1.y;
+			ret_seeds[2] = v1.z;
 
+			for (int m = 0; m < vertex_nb * 4; ++m)
+			{
+				ret_seeds[4 + m] = polygon[m];
+			}
+			ret_seeds[21] = vertex_nb;
+		}
+		if (i == 5)
+			return;*/
 		//now we get the clipped polygon stored in "polygon"
 		//take care of the sychonize
 		//change the polygon data into "weight" and "position"
@@ -453,35 +469,13 @@ int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_
 			MyAtomicAdd(&SeedsInformation[current_seed * 4 + 2], temp_pos.z);
 			MyAtomicAdd(&SeedsInformation[current_seed * 4 + 3], current_weight);
 		}
-
-		if (tid == 0)
-		{
-			for (int m = 0; m < seeds_nb * 4; ++m)
-				ret_seeds[m] = m;
-
-			ret_seeds[0] = v1.x;
-			ret_seeds[1] = v1.y;
-			ret_seeds[2] = v1.z;
-
-			for (int m = 0; m < vertex_nb * 4; ++m)
-			{
-				ret_seeds[4 + m] = polygon[m];
-			}
-			ret_seeds[21] = vertex_nb;
-		}
-		if (i == 1)
-		return;
 	}
 	__syncthreads();
-
-	
 	
 	for (int i = 0; i < seeds_nb * 4; ++i)
 	{
 		ret_seeds[i] = SeedsInformation[i];
 	}
-	
-	free(polygon);
 	return;
 }
 
@@ -866,18 +860,19 @@ extern "C" void runRVD(double* host_seeds_pointer, double* host_mesh_vertex_poin
 
 	CheckCUDAError("pass data back to CPU");
 
-	/*for (int i = 0; i < points_nb; ++i)
+	for (int i = 0; i < points_nb; ++i)
 	{
 		if (host_seedsInfo[i * 4 + 3] != 0){
 			host_seedsInfo[i * 4 + 0] /= host_seedsInfo[i * 4 + 3];
 			host_seedsInfo[i * 4 + 1] /= host_seedsInfo[i * 4 + 3];
 			host_seedsInfo[i * 4 + 2] /= host_seedsInfo[i * 4 + 3];
 		}
-	}*/
-
+	}
+	std::ofstream fileout("1.txt");
 	for (int i = 0; i < points_nb; ++i)
 	{
-		printf("Line %d : x : %.17lf, y : %.17lf, z : %.17lf, w : %.17lf\n", i, host_seedsInfo[i * 4 + 0], host_seedsInfo[i * 4 + 1], host_seedsInfo[i * 4 + 2], host_seedsInfo[i * 4 + 3]);
+		//printf("Line %d : x : %.17lf, y : %.17lf, z : %.17lf, w : %.17lf\n", i, host_seedsInfo[i * 4 + 0], host_seedsInfo[i * 4 + 1], host_seedsInfo[i * 4 + 2], host_seedsInfo[i * 4 + 3]);
+		fileout << "Line " << i << ':' << setprecision(16) << host_seedsInfo[i * 4 + 0] << ' ' << host_seedsInfo[i * 4 + 1] << ' ' << host_seedsInfo[i * 4 + 2] << ' ' << host_seedsInfo[i * 4 + 3] << endl;
 	}
 
 	free(host_seedsInfo);
