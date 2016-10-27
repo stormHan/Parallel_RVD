@@ -180,14 +180,31 @@ int main(int argc, char** argv)
 	
 
 	// --------test-------------
-	//std::ofstream fileout("test.txt");
+	/*std::ofstream fileout("test.txt");
 	
+	for (int i = 0; i < facet_neighbors_indexes.size(); ++i)
+	{
+		if (i % 10 == 0)
+		{
+			fileout << std::endl << "facet " << i << " : ";
 
+		}
+		fileout << facet_neighbors_indexes[i] << " ";
+	}
+	for (int i = 0; i < seeds_neighbors_indexes.size(); ++i)
+	{
+		if (i % 10 == 0)
+		{
+			fileout << std::endl << "Seeds " << i << " : ";
+
+		}
+		fileout << seeds_neighbors_indexes[i] << " ";
+	}*/
 	long t1 = clock();
 
 #ifdef  KNN
 
-	freopen("out", "w", stdout);
+	//freopen("out1", "w", stdout);
 	runRVD(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
 		M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber(), facet_neighbors_indexes, seeds_neighbors_indexes);
 
@@ -209,6 +226,11 @@ int main(int argc, char** argv)
 	RestrictedVoronoiDiagram *m_RVD = new RestrictedVoronoiDiagram(&M_in, &points_out);
 	m_RVD->compute_RVD();
 	printf("CPU running time : %lfms\n", (double)(clock() - t2));
+	freopen("points_result", "w", stdout);
+	for (int i = 0; i < points_out.getPointsNumber(); ++i)
+	{
+		printf("Points %d : x : %.17lf, y : %.17lf, z : %.17lf\n", i, points_out.getPoint(i).x, points_out.getPoint(i).y, points_out.getPoint(i).z, points);
+	}
 
 	/*
 		Set the Windows
