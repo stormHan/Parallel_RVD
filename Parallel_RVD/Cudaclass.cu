@@ -339,7 +339,7 @@ __global__
 void compute_RVD_with_knn(double* seeds_pointer, int seeds_nb,
 double* mesh_vertex, int mesh_vertex_nb,
 int* mesh_facet, int mesh_facet_nb,
-int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_seeds)
+int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_seeds, double* test_seeds)
 {
 	int tid = blockIdx.x * blockDim.x + threadIdx.x;
 	if (tid >= mesh_facet_nb) return;
@@ -373,6 +373,25 @@ int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_
 		*/
 	for (int i = 0; i < k; ++i)
 	{
+		if (i == 4 && tid == 0)
+		{
+			for (int m = 0; m < seeds_nb; ++m)
+			{
+				test_seeds[m] = m;
+				ret_seeds[m] = m;
+			}
+			test_seeds[0] = v1.x;
+			test_seeds[1] = v1.y;
+			test_seeds[2] = v1.z;
+
+			for (int m = 0; m < vertex_nb * 4; ++m)
+			{
+				test_seeds[4 + m] = polygon[m];
+			}
+			test_seeds[21] = vertex_nb;
+
+		}
+		if (i == 4) return;
 		int current_seed = facet_center_neighbor_index[k * tid + i];
 		vertex_nb = 3;
 
@@ -388,22 +407,6 @@ int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_
 		
 		intersection_clip_facet_with_knn(polygon, vertex_nb, current_seed, seeds_pointer, seeds_nb, seeds_neighbor_index, k, tid, i);
 
-		/*if (tid == 0 & i == 2)
-		{
-			for (int m = 0; m < seeds_nb * 4; ++m)
-				ret_seeds[m] = m;
-			ret_seeds[0] = v1.x;
-			ret_seeds[1] = v1.y;
-			ret_seeds[2] = v1.z;
-
-			for (int m = 0; m < vertex_nb * 4; ++m)
-			{
-				ret_seeds[4 + m] = polygon[m];
-			}
-			ret_seeds[21] = vertex_nb;
-		}
-		if (i == 5)
-			return;*/
 		//now we get the clipped polygon stored in "polygon"
 		//take care of the sychonize
 		//change the polygon data into "weight" and "position"
@@ -472,10 +475,10 @@ int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_
 	}
 	__syncthreads();
 	
-	for (int i = 0; i < seeds_nb * 4; ++i)
+	/*for (int i = 0; i < seeds_nb * 4; ++i)
 	{
 		ret_seeds[i] = SeedsInformation[i];
-	}
+	}*/
 	return;
 }
 
@@ -821,6 +824,7 @@ extern "C" void runRVD(double* host_seeds_pointer, double* host_mesh_vertex_poin
 	double* dev_seedsInformation;
 	int* dev_seedsPolygonNumber;
 	double* ret_seeds;
+	double* test_seeds;
 
 	int *dev_facet_center_neighbors, *dev_seeds_neighbors;
 
@@ -832,7 +836,8 @@ extern "C" void runRVD(double* host_seeds_pointer, double* host_mesh_vertex_poin
 	checkCudaErrors(cudaMalloc((void**)&dev_mesh_vertex_pointer, sizeof(double) * mesh_vertex_nb * 3));
 	checkCudaErrors(cudaMalloc((void**)&dev_mesh_facet_index, sizeof(int) * mesh_facet_nb * 3));
 	checkCudaErrors(cudaMalloc((void**)&dev_seedsInformation, sizeof(double) * points_nb * 4));
-	checkCudaErrors(cudaMalloc((void**)&ret_seeds, sizeof(double) * points_nb * 4));
+	checkCudaErrors(cudaMalloc((void**)&ret_seeds, sizeof(double) * points_nb * 5));
+	checkCudaErrors(cudaMalloc((void**)&test_seeds, sizeof(double) * points_nb * 4));
 
 	checkCudaErrors(cudaMalloc((void**)&dev_facet_center_neighbors, sizeof(int) * facet_center_neigbors.size()));
 	checkCudaErrors(cudaMalloc((void**)&dev_seeds_neighbors, sizeof(int) * seeds_neighbors.size()));
@@ -852,23 +857,23 @@ extern "C" void runRVD(double* host_seeds_pointer, double* host_mesh_vertex_poin
 	int blocks = mesh_facet_nb / threads + ((mesh_facet_nb % threads) ? 1 : 0);
 
 	compute_RVD_with_knn << <threads, blocks >> >(dev_seeds_pointer, points_nb, dev_mesh_vertex_pointer, mesh_vertex_nb, dev_mesh_facet_index, mesh_facet_nb, dev_facet_center_neighbors,
-		dev_seeds_neighbors, 10, ret_seeds);
+		dev_seeds_neighbors, 10, ret_seeds, test_seeds);
 
 	CheckCUDAError("kenerl function");
 	
-	cudaMemcpy(host_seedsInfo, ret_seeds, sizeof(double) * points_nb * 4, cudaMemcpyDeviceToHost);
+	cudaMemcpy(host_seedsInfo, test_seeds, sizeof(double) * points_nb * 4, cudaMemcpyDeviceToHost);
 
 	CheckCUDAError("pass data back to CPU");
 
-	for (int i = 0; i < points_nb; ++i)
+	/*for (int i = 0; i < points_nb; ++i)
 	{
 		if (host_seedsInfo[i * 4 + 3] != 0){
 			host_seedsInfo[i * 4 + 0] /= host_seedsInfo[i * 4 + 3];
 			host_seedsInfo[i * 4 + 1] /= host_seedsInfo[i * 4 + 3];
 			host_seedsInfo[i * 4 + 2] /= host_seedsInfo[i * 4 + 3];
 		}
-	}
-	std::ofstream fileout("1.txt");
+	}*/
+	std::ofstream fileout("2.txt");
 	for (int i = 0; i < points_nb; ++i)
 	{
 		//printf("Line %d : x : %.17lf, y : %.17lf, z : %.17lf, w : %.17lf\n", i, host_seedsInfo[i * 4 + 0], host_seedsInfo[i * 4 + 1], host_seedsInfo[i * 4 + 2], host_seedsInfo[i * 4 + 3]);
