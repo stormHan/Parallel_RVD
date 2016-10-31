@@ -373,7 +373,7 @@ int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_
 		*/
 	for (int i = 0; i < k; ++i)
 	{
-		if (i == 4 && tid == 0)
+		if (i == 6)
 		{
 			for (int m = 0; m < seeds_nb; ++m)
 			{
@@ -391,94 +391,96 @@ int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_
 			test_seeds[21] = vertex_nb;
 
 		}
-		if (i == 4) return;
-		int current_seed = facet_center_neighbor_index[k * tid + i];
-		vertex_nb = 3;
-
-		//intialize the polygon with the 3 vertex of the current facet
-		/*
-		polygon pointer can be apart by several vertex
-		a vertex is made up with x,y,z,w
-		w : the weight of a vertex
-		*/
-		polygon[0] = v1.x; polygon[1] = v1.y; polygon[2] = v1.z; polygon[3] = 1.0;
-		polygon[4] = v2.x; polygon[5] = v2.y; polygon[6] = v2.z; polygon[7] = 1.0;
-		polygon[8] = v3.x; polygon[9] = v3.y; polygon[10] = v3.z; polygon[11] = 1.0;
+		if (i == 6) return;
 		
-		intersection_clip_facet_with_knn(polygon, vertex_nb, current_seed, seeds_pointer, seeds_nb, seeds_neighbor_index, k, tid, i);
+		//int current_seed = facet_center_neighbor_index[k * tid + i];
+		//vertex_nb = 3;
 
-		//now we get the clipped polygon stored in "polygon"
-		//take care of the sychonize
-		//change the polygon data into "weight" and "position"
-		if (vertex_nb == 0)
-			break;
+		////intialize the polygon with the 3 vertex of the current facet
+		///*
+		//polygon pointer can be apart by several vertex
+		//a vertex is made up with x,y,z,w
+		//w : the weight of a vertex
+		//*/
+		//polygon[0] = v1.x; polygon[1] = v1.y; polygon[2] = v1.z; polygon[3] = 1.0;
+		//polygon[4] = v2.x; polygon[5] = v2.y; polygon[6] = v2.z; polygon[7] = 1.0;
+		//polygon[8] = v3.x; polygon[9] = v3.y; polygon[10] = v3.z; polygon[11] = 1.0;
+		//
+		//intersection_clip_facet_with_knn(polygon, vertex_nb, current_seed, seeds_pointer, seeds_nb, seeds_neighbor_index, k, tid, i);
 
-		double weight;
-		double3 position;
+		////now we get the clipped polygon stored in "polygon"
+		////take care of the sychonize
+		////change the polygon data into "weight" and "position"
+		//if (vertex_nb == 0)
+		//	break;
 
-		int _v1 = 0;
-		int _v2, _v3;
+		//double weight;
+		//double3 position;
 
-		double3 pos1, pos2, pos3;
-		double d1, d2, d3;
-		int triangle_nb = vertex_nb - 2;
+		//int _v1 = 0;
+		//int _v2, _v3;
 
-		double total_weight = 0.0;
-		double3 centriodTimesWeight = { 0.0, 0.0, 0.0 };
+		//double3 pos1, pos2, pos3;
+		//double d1, d2, d3;
+		//int triangle_nb = vertex_nb - 2;
 
-		double current_weight = 0.0;
-		double3 current_posTimesWeight = { 0.0, 0.0, 0.0 };
+		//double total_weight = 0.0;
+		//double3 centriodTimesWeight = { 0.0, 0.0, 0.0 };
 
-		for (int i = 1; i < vertex_nb - 1; ++i)
-		{
-			_v2 = i; _v3 = i + 1;
+		//double current_weight = 0.0;
+		//double3 current_posTimesWeight = { 0.0, 0.0, 0.0 };
 
-			pos1 = { polygon[_v1 * 4 + 0], polygon[_v1 * 4 + 1], polygon[_v1 * 4 + 2] };
-			d1 = polygon[_v1 * 4 + 3];
+		//for (int i = 1; i < vertex_nb - 1; ++i)
+		//{
+		//	_v2 = i; _v3 = i + 1;
 
-			pos2 = { polygon[_v2 * 4 + 0], polygon[_v2 * 4 + 1], polygon[_v2 * 4 + 2] };
-			d2 = polygon[_v2 * 4 + 3];
+		//	pos1 = { polygon[_v1 * 4 + 0], polygon[_v1 * 4 + 1], polygon[_v1 * 4 + 2] };
+		//	d1 = polygon[_v1 * 4 + 3];
 
-			pos3 = { polygon[_v3 * 4 + 0], polygon[_v3 * 4 + 1], polygon[_v3 * 4 + 2] };
-			d3 = polygon[_v3 * 4 + 3];
+		//	pos2 = { polygon[_v2 * 4 + 0], polygon[_v2 * 4 + 1], polygon[_v2 * 4 + 2] };
+		//	d2 = polygon[_v2 * 4 + 3];
 
-			computeTriangleCentriod(pos1, pos2, pos3, d1, d2, d3, centriodTimesWeight, total_weight);
+		//	pos3 = { polygon[_v3 * 4 + 0], polygon[_v3 * 4 + 1], polygon[_v3 * 4 + 2] };
+		//	d3 = polygon[_v3 * 4 + 3];
 
-			current_weight += total_weight;
-			current_posTimesWeight.x += centriodTimesWeight.x;
-			current_posTimesWeight.y += centriodTimesWeight.y;
-			current_posTimesWeight.z += centriodTimesWeight.z;
+		//	computeTriangleCentriod(pos1, pos2, pos3, d1, d2, d3, centriodTimesWeight, total_weight);
 
-			total_weight = 0.0;
-			centriodTimesWeight = { 0.0, 0.0, 0.0 };
-		}
+		//	current_weight += total_weight;
+		//	current_posTimesWeight.x += centriodTimesWeight.x;
+		//	current_posTimesWeight.y += centriodTimesWeight.y;
+		//	current_posTimesWeight.z += centriodTimesWeight.z;
 
-		//atomicAdd(&SeedsPolygon_nb[current_seed], 1);
-		if (current_weight != 0 && triangle_nb > 0){
-			current_posTimesWeight.x /= current_weight;
-			current_posTimesWeight.y /= current_weight;
-			current_posTimesWeight.z /= current_weight;
+		//	total_weight = 0.0;
+		//	centriodTimesWeight = { 0.0, 0.0, 0.0 };
+		//}
 
-			current_weight /= triangle_nb;
+		////atomicAdd(&SeedsPolygon_nb[current_seed], 1);
+		//if (current_weight != 0 && triangle_nb > 0){
+		//	current_posTimesWeight.x /= current_weight;
+		//	current_posTimesWeight.y /= current_weight;
+		//	current_posTimesWeight.z /= current_weight;
 
-			double3 temp_pos;
+		//	current_weight /= triangle_nb;
 
-			temp_pos.x = current_posTimesWeight.x * current_weight;
-			temp_pos.y = current_posTimesWeight.y * current_weight;
-			temp_pos.z = current_posTimesWeight.z * current_weight;
+		//	double3 temp_pos;
 
-			MyAtomicAdd(&SeedsInformation[current_seed * 4 + 0], temp_pos.x);
-			MyAtomicAdd(&SeedsInformation[current_seed * 4 + 1], temp_pos.y);
-			MyAtomicAdd(&SeedsInformation[current_seed * 4 + 2], temp_pos.z);
-			MyAtomicAdd(&SeedsInformation[current_seed * 4 + 3], current_weight);
-		}
+		//	temp_pos.x = current_posTimesWeight.x * current_weight;
+		//	temp_pos.y = current_posTimesWeight.y * current_weight;
+		//	temp_pos.z = current_posTimesWeight.z * current_weight;
+
+		//	MyAtomicAdd(&SeedsInformation[current_seed * 4 + 0], temp_pos.x);
+		//	MyAtomicAdd(&SeedsInformation[current_seed * 4 + 1], temp_pos.y);
+		//	MyAtomicAdd(&SeedsInformation[current_seed * 4 + 2], temp_pos.z);
+		//	MyAtomicAdd(&SeedsInformation[current_seed * 4 + 3], current_weight);
+		//}
+		
 	}
 	__syncthreads();
 	
-	/*for (int i = 0; i < seeds_nb * 4; ++i)
+	for (int i = 0; i < seeds_nb * 4; ++i)
 	{
 		ret_seeds[i] = SeedsInformation[i];
-	}*/
+	}
 	return;
 }
 
