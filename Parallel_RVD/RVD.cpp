@@ -95,6 +95,7 @@ namespace P_RVD
 		face_end = p_Mesh->meshFacets.getFacetsNumber();
 
 		Polygon F;
+		int _test_count = 0; std::ofstream ffaa("point0_polygons.txt");
 		/*
 			compute the RVD of each facet and each seed
 		*/
