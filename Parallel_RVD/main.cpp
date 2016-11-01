@@ -58,7 +58,7 @@ extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_poi
 
 extern "C" void runRVD(double* host_seeds_pointer, double* host_mesh_vertex_pointer,
 	int* host_facet_index, int points_nb, int mesh_vertex_nb, int mesh_facet_nb,
-	std::vector<int> facet_center_neigbors, std::vector<int> seeds_neighbors);
+	std::vector<int> facet_center_neigbors, std::vector<int> seeds_neighbors, std::vector<int>& seeds_polygon_nb);
 
 /*
 	renderring part
@@ -202,11 +202,12 @@ int main(int argc, char** argv)
 	}*/
 	long t1 = clock();
 
+	std::vector<int> seeds_polygon_nb;
 #ifdef  KNN
 
 	//freopen("out1", "w", stdout);
 	runRVD(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
-		M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber(), facet_neighbors_indexes, seeds_neighbors_indexes);
+		M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber(), facet_neighbors_indexes, seeds_neighbors_indexes, seeds_polygon_nb);
 
 #else
 
@@ -226,10 +227,14 @@ int main(int argc, char** argv)
 	RestrictedVoronoiDiagram *m_RVD = new RestrictedVoronoiDiagram(&M_in, &points_out);
 	m_RVD->compute_RVD();
 	printf("CPU running time : %lfms\n", (double)(clock() - t2));
-	freopen("points_result", "w", stdout);
+	freopen("eight_updating_points", "w", stdout);
 	for (int i = 0; i < points_out.getPointsNumber(); ++i)
 	{
-		printf("Points %d : x : %.17lf, y : %.17lf, z : %.17lf\n", i, points_out.getPoint(i).x, points_out.getPoint(i).y, points_out.getPoint(i).z, points);
+		printf("Points %d : x : %.17lf, y : %.17lf, z : %.17lf ", i,
+			points_out.getPoint(i).x, points_out.getPoint(i).y, points_out.getPoint(i).z);
+		
+		
+		printf("\n");
 	}
 
 	/*
