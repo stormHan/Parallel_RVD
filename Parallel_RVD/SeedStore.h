@@ -10,6 +10,10 @@
 #include <string>
 #include <vector>
 
+//for test
+#include <iostream>
+#include <fstream>
+#include <iomanip>
 #include "math_3d.h"
 #include "Common.h"
 

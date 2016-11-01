@@ -33,7 +33,18 @@ namespace P_RVD
 			temp.center += (iter->first.center * iter->first.weight);
 			m_seed_weight_pos[iter->second] = temp;
 		}
-
+		std::ofstream a("point0_update_info");
+		for (std::map<SeedWeightPosition, t_index>::const_iterator
+			iter = seed_updating_map.begin();
+			iter != seed_updating_map.end();
+		++iter)
+		{
+			if (iter->second == 0)
+			{
+				a << "x : " << iter->first.center.x << " y: " << iter->first.center.y << " z : " << iter->first.center.z
+					<< " w : " << iter->first.weight << std::endl;
+			}
+		}
 		for (std::vector<SeedWeightPosition>::iterator
 			iter = m_seed_weight_pos.begin();
 			iter != m_seed_weight_pos.end();
