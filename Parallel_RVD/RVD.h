@@ -8,6 +8,10 @@
 #define H_RVD_H
 #include <algorithm>
 #include <map>
+//for test
+#include <iostream>
+#include <fstream>
+#include <iomanip>
 
 #include "Common.h"
 #include "Mesh.h"
@@ -70,6 +74,12 @@ namespace P_RVD
 			Swap two pointers between two polygons
 		*/
 		void swap_polygons(Polygon*& ping, Polygon*& pong);
+
+		/*
+			Get the Polygon number
+		*/
+		std::vector<int> getPolygon_nb() const{ return polygon_nb; }
+
 
 		/*
 			deconstruction
