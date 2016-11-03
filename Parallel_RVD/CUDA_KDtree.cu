@@ -187,7 +187,7 @@ namespace P_RVD{
 
 			if (nodes[cur].left == -1){
 				//Get to the leaf node
-
+				
 				neighbor_nb += nodes[cur].num_indexes;
 				while (neighbor_nb < k)
 				{
@@ -195,17 +195,19 @@ namespace P_RVD{
 					neighbor_nb = nodes[cur].num_indexes;
 				}
 				*ret_node = cur;
-
+				
 				//Now we get enough neighbors in cur node
-				int *temp_index = (int*)malloc(sizeof(int) * nodes[cur].num_indexes);
-				double *temp_dists = (double*)malloc(sizeof(double) * nodes[cur].num_indexes);
-
+				//int *temp_index = (int*)malloc(sizeof(int) * nodes[cur].num_indexes);
+				//double *temp_dists = (double*)malloc(sizeof(double) * nodes[cur].num_indexes);
+				int temp_index[20];
+				double temp_dists[20];
+				
 				for (int i = 0; i < nodes[cur].num_indexes; ++i)
 				{
 					temp_index[i] = indexes[nodes[cur].indexes + i];
 					temp_dists[i] = Distance(query, pts[temp_index[i]]);
 				}
-
+				
 				int n = nodes[cur].num_indexes;
 				//利用k次冒泡得到前小的距离
 				int best_idx = 0;
@@ -233,6 +235,8 @@ namespace P_RVD{
 					best_idx = 0;
 					best_dist = FLT_MAX;
 				}
+				//free(temp_index);
+				//free(temp_dists);
 				break;
 			}
 			else if (query.coords[split_axis] < nodes[cur].split_value){
