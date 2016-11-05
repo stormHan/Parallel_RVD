@@ -395,31 +395,7 @@ int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_
 		
 		
 		intersection_clip_facet_with_knn(polygon, vertex_nb, current_seed, seeds_pointer, seeds_nb, seeds_neighbor_index, k, tid, i);
-		/*if (tid == 1)
-		{
-			if (i == 0)
-				for (int m = 0; m < seeds_nb; ++m)
-				{
-					test_seeds[m] = 1;
-				}
-			test_seeds[0] = v1.x;
-			test_seeds[1] = v1.y;
-			test_seeds[2] = v1.z;
-			test_seeds[4] = v2.x;
-			test_seeds[5] = v2.y;
-			test_seeds[6] = v2.z;
-			test_seeds[8] = v3.x;
-			test_seeds[9] = v3.y;
-			test_seeds[10] = v3.z;
-
-			for (int m = 0; m < vertex_nb * 4; ++m)
-			{
-				test_seeds[i * 16 + 16 + m] = polygon[m];
-			}
-			
-
-		}
-		if (i == 9) return;*/
+		
 		//now we get the clipped polygon stored in "polygon"
 		//take care of the sychonize
 		//change the polygon data into "weight" and "position"
