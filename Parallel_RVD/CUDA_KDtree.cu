@@ -566,9 +566,23 @@ namespace P_RVD{
 		cudaMemcpy(gpu_queries, &queries[0], sizeof(double) * queries.size() * KDTREE_DIM, cudaMemcpyHostToDevice);
 		CheckCUDAError("Copy the data");
 
-		printf("Cuda blocks / threads : %d %d", blocks, threads);
+		// Variables for duration evaluation
+		cudaEvent_t start, stop;
+		cudaEventCreate(&start);
+		cudaEventCreate(&stop);
+		float elapsed_time;
 
-		SearchBatch_knn << < blocks, threads >> >(m_gpu_nodes, m_gpu_indexes, m_gpu_points, m_num_points, gpu_queries, queries.size(), gpu_ret_indexes, gpu_ret_dist, k);
+		cudaEventRecord(start, 0);
+			SearchBatch_knn << < blocks, threads >> >(m_gpu_nodes, m_gpu_indexes, m_gpu_points, m_num_points, gpu_queries, queries.size(), gpu_ret_indexes, gpu_ret_dist, k);
+		cudaEventRecord(stop, 0);
+		cudaEventSynchronize(stop);
+		cudaEventElapsedTime(&elapsed_time, start, stop);
+		printf("Searching %d points, My kdtree done in %f ms \n",queries.size(), elapsed_time);
+		// Destroy cuda event
+		cudaEventDestroy(start);
+		cudaEventDestroy(stop);
+
+		
 		//cudaThreadSynchronize();
 
 		CheckCUDAError("kernel function");
@@ -621,9 +635,23 @@ namespace P_RVD{
 		cudaMemcpy(gpu_queries, &queries[0], sizeof(double) * queries.size() * KDTREE_DIM, cudaMemcpyHostToDevice);
 		CheckCUDAError("Copy the data");
 
-		printf("Cuda blocks / threads : %d %d", blocks, threads);
+		// Variables for duration evaluation
+		cudaEvent_t start, stop;
+		cudaEventCreate(&start);
+		cudaEventCreate(&stop);
+		float elapsed_time;
 
+		cudaEventRecord(start, 0);
 		SearchBatch_knn << < blocks, threads >> >(m_gpu_nodes, m_gpu_indexes, m_gpu_points, m_num_points, gpu_queries, queries.size(), gpu_ret_indexes, gpu_ret_dist, k);
+		cudaEventRecord(stop, 0);
+		cudaEventSynchronize(stop);
+		cudaEventElapsedTime(&elapsed_time, start, stop);
+		printf("Searching %d points, My kdtree done in %f ms \n", queries.size(), elapsed_time);
+		// Destroy cuda event
+		cudaEventDestroy(start);
+		cudaEventDestroy(stop);
+
+		
 		//cudaThreadSynchronize();
 
 		CheckCUDAError("kernel function");
