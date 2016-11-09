@@ -541,26 +541,21 @@ extern "C" void  runKnnCuda(Points r, Points queries, std::vector<int>& indexes)
 	dist = (float *)malloc(query_nb * k * sizeof(float));
 	ind = (int *)malloc(query_nb * k * sizeof(float));
 	
-	indexes.resize(query_nb * k);
+	//indexes.resize(query_nb * k);
 	// Init 
 	srand(time(NULL));
-	for (i = 0; i < ref_nb; i++)
-	{
-		ref[i * 3 + 0] = (float)r.getPoint(i).x;
-		ref[i * 3 + 1] = (float)r.getPoint(i).y;
-		ref[i * 3 + 2] = (float)r.getPoint(i).z;
+	for (i = 0; i < ref_nb; i++){
+		ref[i] = (float)r.getPoint(i).x;
+		ref[i + ref_nb] = (float)r.getPoint(i).y;
+		ref[i + (2 * ref_nb)] = (float)r.getPoint(i).z;
 	}
-	for (i = 0; i < query_nb; i++)
-	{
-		query[i * 3 + 0] = (float)queries.getPoint(i).x;
-		query[i * 3 + 1] = (float)queries.getPoint(i).y;
-		query[i * 3 + 2] = (float)queries.getPoint(i).z;
+
+	for (i = 0; i < query_nb; i++){
+		query[i] = (float)queries.getPoint(i).x;
+		query[i + query_nb] = (float)queries.getPoint(i).y;
+		query[i + (2 * query_nb)] = (float)queries.getPoint(i).z;
 	}
 	
-	freopen("knn index", "w", stdout);
-	for (i = 0; i < ref_nb * dim; ++i){
-		printf("%f\n", ref[i]);
-	}
 	// Variables for duration evaluation
 	cudaEvent_t start, stop;
 	cudaEventCreate(&start);
@@ -578,14 +573,13 @@ extern "C" void  runKnnCuda(Points r, Points queries, std::vector<int>& indexes)
 	cudaEventRecord(start, 0);
 	
 	knn(ref, ref_nb, query, query_nb, dim, k, dist, ind);
-	
-	
+
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(&elapsed_time, start, stop);
-	printf(" done in %f s for %d iterations (%f s by iteration)\n", elapsed_time / 1000, iterations, elapsed_time / (iterations * 1000));
-
-
+	printf("Vincent Knn done in %f s for %d iterations (%f s by iteration)\n", elapsed_time / 1000, iterations, elapsed_time / (iterations * 1000));
+	
+	
 	// Destroy cuda event object and free memory
 	cudaEventDestroy(start);
 	cudaEventDestroy(stop);
