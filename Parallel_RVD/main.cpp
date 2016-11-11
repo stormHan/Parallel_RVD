@@ -161,7 +161,7 @@ int main(int argc, char** argv)
 
 	std::vector<int> seeds_polygon_nb;
 #ifdef  KNN
-	long _kdtree_time = clock();
+	
 	/*
 	…Ë÷√Kdtree
 	Create the tree
@@ -182,35 +182,24 @@ int main(int argc, char** argv)
 	std::vector<int> facet_neighbors_indexes, seeds_neighbors_indexes;
 	std::vector<double> facet_neighbors_dists, seeds_neighbors_dists;
 
+	long _kdtree_time = clock();
 	runKnnCuda(points, points, seeds_neighbors_indexes);
-	printf("Search kdtree time : %lfms\n", (double)(clock() - _kdtree_time));
+	//printf("Search kdtree time : %lfms\n", (double)(clock() - _kdtree_time));
+	printf("vincent kdtree time : %lfms\n", (double)(clock() - _kdtree_time));
 
+	long _kkt = clock();
 	tree.Create_kdtree(data, maxTreeLevel);
 	GPU_tree.CreateKDtree(tree.GetRoot(), tree.GetNumNodes(), data, tree.GetLevel());
-	GPU_tree.Search_knn(M_in, facet_neighbors_indexes, facet_neighbors_dists, 10);
+	//GPU_tree.Search_knn(M_in, facet_neighbors_indexes, facet_neighbors_dists, 10);
+	
 	GPU_tree.Search_knn(data, seeds_neighbors_indexes, seeds_neighbors_dists, 10);
-	freopen("bunny_seed_knn.txt", "w", stdout);
-	for (int i = 0; i < seeds_neighbors_indexes.size(); ++i)
-	{
-		if (i % 10 == 0) printf("Point  %d : ", i);
-		printf(" %d ", seeds_neighbors_indexes[i]);
-		if (i % 10 == 9)
-			printf("\n");
-	}
-	freopen("bunny_facet_knn.txt", "w", stdout);
-	for (int i = 0; i < facet_neighbors_indexes.size(); ++i)
-	{
-		if (i % 10 == 0) printf("Point  %d : ", i);
-		printf(" %d ", facet_neighbors_indexes[i]);
-		if (i % 10 == 9)
-			printf("\n");
-	}
-	printf("Search kdtree time : %lfms\n", (double)(clock() - _kdtree_time));
 
+	printf("knn1 time : %lfms\n", (double)(clock() - _kkt));
+	getchar();
 	long t1 = clock();
 	//freopen("out1", "w", stdout);
-	//runRVD(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
-	//	M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber(), facet_neighbors_indexes, seeds_neighbors_indexes, seeds_polygon_nb);
+	runRVD(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
+		M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber(), facet_neighbors_indexes, seeds_neighbors_indexes, seeds_polygon_nb);
 
 #else
 
@@ -228,18 +217,9 @@ int main(int argc, char** argv)
 	*/
 	long t2 = clock();
 	RestrictedVoronoiDiagram *m_RVD = new RestrictedVoronoiDiagram(&M_in, &points_out);
-	m_RVD->compute_RVD();
+	//m_RVD->compute_RVD();
 	printf("CPU running time : %lfms\n", (double)(clock() - t2));
 	getchar();
-	freopen("eight_updating_points", "w", stdout);
-	for (int i = 0; i < points_out.getPointsNumber(); ++i)
-	{
-		printf("Points %d : x : %.17lf, y : %.17lf, z : %.17lf ", i,
-			points_out.getPoint(i).x, points_out.getPoint(i).y, points_out.getPoint(i).z);
-		
-		
-		printf("\n");
-	}
 
 	/*
 		Set the Windows
@@ -249,8 +229,8 @@ int main(int argc, char** argv)
 	GLUTBackendCreateWindow(WINDOWS_WIDTH, WINDOWS_HEIGHT, false, "Rvd");
 
 	//GraphicsDrawer* m_GraphicsDrawer = new GraphicsDrawer();
-	m_GraphicsDrawer->Init();
-	m_GraphicsDrawer->Run();
+	//m_GraphicsDrawer->Init();
+	//m_GraphicsDrawer->Run();
 
 	//p_in  records the position before
 	//p_out records the position after compute RVD
