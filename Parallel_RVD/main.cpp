@@ -182,21 +182,23 @@ int main(int argc, char** argv)
 	std::vector<int> facet_neighbors_indexes, seeds_neighbors_indexes;
 	std::vector<double> facet_neighbors_dists, seeds_neighbors_dists;
 
-	long _kdtree_time = clock();
-	runKnnCuda(points, points, seeds_neighbors_indexes);
-	//printf("Search kdtree time : %lfms\n", (double)(clock() - _kdtree_time));
-	printf("vincent kdtree time : %lfms\n", (double)(clock() - _kdtree_time));
+
 
 	long _kkt = clock();
 	tree.Create_kdtree(data, maxTreeLevel);
 	GPU_tree.CreateKDtree(tree.GetRoot(), tree.GetNumNodes(), data, tree.GetLevel());
-	//GPU_tree.Search_knn(M_in, facet_neighbors_indexes, facet_neighbors_dists, 10);
-	
+	printf("knn1 time : %lfms\n", (double)(clock() - _kkt));
+	GPU_tree.Search(M_in, facet_neighbors_indexes, facet_neighbors_dists);
+	printf("knn1 time : %lfms\n", (double)(clock() - _kkt));
 	GPU_tree.Search_knn(data, seeds_neighbors_indexes, seeds_neighbors_dists, 10);
 
 	printf("knn1 time : %lfms\n", (double)(clock() - _kkt));
-	getchar();
-	long t1 = clock();
+
+	//long _kdtree_time = clock();
+	//runKnnCuda(points, points, seeds_neighbors_indexes);
+	//printf("Search kdtree time : %lfms\n", (double)(clock() - _kdtree_time));
+	//printf("vincent kdtree time : %lfms\n", (double)(clock() - _kdtree_time));
+	
 	//freopen("out1", "w", stdout);
 	runRVD(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
 		M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber(), facet_neighbors_indexes, seeds_neighbors_indexes, seeds_polygon_nb);
@@ -209,7 +211,6 @@ int main(int argc, char** argv)
 #endif //  KNN
 
 	
-	printf("GPU compute RVD time : %lfms\n", (double)(clock() - t1));
 
 	//getchar();
 	/*
@@ -217,7 +218,7 @@ int main(int argc, char** argv)
 	*/
 	long t2 = clock();
 	RestrictedVoronoiDiagram *m_RVD = new RestrictedVoronoiDiagram(&M_in, &points_out);
-	//m_RVD->compute_RVD();
+	m_RVD->compute_RVD();
 	printf("CPU running time : %lfms\n", (double)(clock() - t2));
 	getchar();
 
