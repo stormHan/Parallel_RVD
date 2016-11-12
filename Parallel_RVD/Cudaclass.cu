@@ -17,6 +17,24 @@ using namespace P_RVD;
 __device__ double* SeedsInformation;
 
 __device__ int* SeedsPolygon_nb;
+
+const int CUDA_Stack_size = 10;
+
+struct Cuda_Vertex
+{
+	double x;
+	double y;
+	double z;
+	double w;
+
+	int neigh_s = -1;
+};
+
+struct Cuda_Polygon
+{
+	Cuda_Vertex vertex[10];
+	int vertex_nb;
+};
 /*
 	process the cuda error
 */
@@ -65,76 +83,6 @@ __device__ double3 computeCentriod(double3 a, double3 b, double3 c)
 	return ret;
 }
 
-/*
-	device function
-	find nearest n seeds in device
-
-	input:
-	centriod : the physical position of the seed
-	seeds_pointer : pointer which store the position of the seeds
-	seeds_nb : the number of seeds
-
-	output:
-	nearest_points : the result of the function which store the index of the nearest seeds
-*/
-__device__
-void findNearestPoints(double3 centriod, double* seeds_pointer, int seeds_nb, int* nearest_points, int nearest_points_nb)
-{
-	seeds_nb = 115;
-	double* distance_from_centroid = (double*)malloc(sizeof(double) * seeds_nb);
-
-	//find the nearest points
-	for (int i = 0; i < seeds_nb; ++i)
-	{
-		double3 seeds_pos = { seeds_pointer[i * 3 + 0], seeds_pointer[i * 3 + 1], seeds_pointer[i * 3 + 2] };
-		distance_from_centroid[i] = computeDistance(centriod, seeds_pos);
-		
-	}
-	double* test = (double*)malloc(sizeof(double) * 100);
-	test[0] = 0.01;
-	free(test);
-	free(distance_from_centroid);
-	return;
-	//设置一个数组来存储下标
-	int* index = (int*)malloc(sizeof(int) * seeds_nb);
-	for (int i = 0; i < seeds_nb; ++i)
-	{
-		index[i] = i;
-	}
-
-	for (int i = 1; i < seeds_nb; ++i)
-	{
-		double key = distance_from_centroid[i];
-		int store_index = index[i];
-		for (int j = i - 1; j >= 0; --j)
-		{
-			if (distance_from_centroid[j] >= key)
-			{
-				distance_from_centroid[j + 1] = distance_from_centroid[j];
-				index[j + 1] = index[j];
-				if (j == 0)
-				{
-					distance_from_centroid[j] = key;
-					index[j] = store_index;
-				}
-			}
-			else
-			{
-				distance_from_centroid[j + 1] = key;
-				index[j + 1] = store_index;
-				break;
-			}
-		}
-	}
-	for (int i = 0; i < nearest_points_nb; ++i)
-	{
-		nearest_points[i] = index[i];
-	}
-
-	free(distance_from_centroid);
-	free(index);
-}
-
 
 /*
 device function
@@ -145,12 +93,12 @@ input : polygon ping and its number
 output: polygon pong and its number
 */
 __device__
-void clip_by_plane(double* ping, int& ping_nb, double* pong, int& pong_nb, int seed_i, int seed_j, double* seeds_pointer, int seeds_nb)
+void clip_by_plane(Cuda_Polygon& ping, Cuda_Polygon& pong, int seed_i, int seed_j, double* seeds_pointer, int seeds_nb)
 {
 	//reset the pong
-	pong_nb = 0;
+	pong.vertex_nb = 0;
 
-	if (ping_nb == 0)
+	if (ping.vertex_nb == 0)
 		return;
 
 	//get the position of seed i and seed j
@@ -160,19 +108,16 @@ void clip_by_plane(double* ping, int& ping_nb, double* pong, int& pong_nb, int s
 	// Compute d = n . (2m), where n is the
 	// normal vector of the bisector [i, j]
 	// and m the middle point of the bisector.
-	double d;
+	double d = 0.0;
 	d = dot(add(position_i, position_j), sub(position_i, position_j));
 
 	//The predecessor of the first vertex is the last vertex
-	int prev_index_vertex = ping_nb - 1;
-
+	int prev_k = ping.vertex_nb - 1;
+	
 	//get the position data
-	double4 prev_vertex = { ping[prev_index_vertex * 4 + 0],
-		ping[prev_index_vertex * 4 + 1],
-		ping[prev_index_vertex * 4 + 2],
-		ping[prev_index_vertex * 4 + 3] };
+	Cuda_Vertex* prev_vk = &ping.vertex[prev_k];
 
-	double3 prev_vertex_position = { prev_vertex.x, prev_vertex.y, prev_vertex.z };
+	double3 prev_vertex_position = { prev_vk->x, prev_vk->y, prev_vk->z };
 
 	//then we compute prev_vertex_position "cross" n 
 	//prev_l = prev_vertex_position . n
@@ -182,10 +127,10 @@ void clip_by_plane(double* ping, int& ping_nb, double* pong, int& pong_nb, int s
 	int prev_status = sgn(2.0 * prev_l - d);
 
 	//traverse the Vertex in this Polygon
-	for (int k = 0; k < ping_nb; ++k)
+	for (int k = 0; k < ping.vertex_nb; ++k)
 	{
-		double4 vertex = { ping[k * 4 + 0], ping[k * 4 + 1], ping[k * 4 + 2], ping[k * 4 + 3] };
-		double3 vertex_position = { vertex.x, vertex.y, vertex.z };
+		Cuda_Vertex* vk = &ping.vertex[k];
+		double3 vertex_position = { vk->x, vk->y, vk->z };
 
 		double l = dot(vertex_position, sub(position_i, position_j));
 		int status = sgn(2.0 * l - d);
@@ -195,7 +140,7 @@ void clip_by_plane(double* ping, int& ping_nb, double* pong, int& pong_nb, int s
 		if (status != prev_status && (prev_status) != 0)
 		{
 			// create the intersection and update the Polyon
-			double4 I;
+			Cuda_Vertex I;
 
 			//compute the position and weight
 			double denom = 2.0 * (prev_l - l);
@@ -223,32 +168,34 @@ void clip_by_plane(double* ping, int& ping_nb, double* pong, int& pong_nb, int s
 			I.z = lambda1 * prev_vertex_position.z + lambda2 * vertex_position.z;
 
 			//Set the Weight of Vertex
-			I.w = (lambda1 * prev_vertex.w + lambda2 * vertex.w);
+			I.w = (lambda1 * prev_vk->w + lambda2 * vk->w);
+
+			if (status > 0)
+			{
+				I.neigh_s = (seed_j);
+			}
+			else {
+				I.neigh_s = (vk->neigh_s);
+			}
 
 			//add I to pong
-			pong[pong_nb * 4 + 0] = I.x;
-			pong[pong_nb * 4 + 1] = I.y;
-			pong[pong_nb * 4 + 2] = I.z;
-			pong[pong_nb * 4 + 3] = I.w;
-			pong_nb++;
+			pong.vertex[pong.vertex_nb] = I;
+			pong.vertex_nb++;
 
 		}
 
 		if (status > 0)
 		{
 			//add vertex to pong
-			pong[pong_nb * 4 + 0] = vertex.x;
-			pong[pong_nb * 4 + 1] = vertex.y;
-			pong[pong_nb * 4 + 2] = vertex.z;
-			pong[pong_nb * 4 + 3] = vertex.w;
-			pong_nb++;
+			pong.vertex[pong.vertex_nb] = *vk;
+			pong.vertex_nb++;
 		}
 
-		prev_vertex = vertex;
+		prev_vk = vk;
 		prev_vertex_position = vertex_position;
 		prev_status = status;
 		prev_l = l;
-		prev_index_vertex = k;
+		prev_k = k;
 	}
 	return;
 }
@@ -259,80 +206,105 @@ swap the ping and pong to make sure
 ping store the result;
 */
 __device__
-void swap_polygons(double* ping, int& ping_nb, double* pong, int& pong_nb)
+void swap_polygons(Cuda_Polygon& ping, Cuda_Polygon& pong)
 {
 	//!!! can be accerate
 	//不确定是否可以使用memset memcpy
-	double temp;
-	int temp_nb = ping_nb;
-
-	ping_nb = pong_nb;
-	pong_nb = temp_nb;
-
-	for (int i = 0; i < 40; ++i)
-	{
-		temp = ping[i];
-		ping[i] = pong[i];
-		pong[i] = temp;
-	}
+	Cuda_Polygon t = ping;
+	ping = pong;
+	pong = t;
 }
 
 /*
 */
 __device__
-void intersection_clip_facet_with_knn(double* polygon_pointer, int& vertex_nb, int current_seed, double* seeds_pointer, int seeds_nb, int *seeds_neighbor_index, int k
-, int tid, int pass)
+void intersection_clip_facet_with_knn(Cuda_Polygon& current_polygon , int current_seed, double* seeds_pointer, int seeds_nb, int *seeds_neighbor_index, int k)
 {
 	
 	//set a buffer pointer to store the polygon
-	double polygon_buffer[40];
-	int polygon_buffer_nb = 0;
+	Cuda_Polygon polygon_buffer;
 	
 	for (int i = 0; i < k; ++i)
 	{
 		int j = seeds_neighbor_index[current_seed * k + i];
 		if (current_seed != j)
 		{
-			clip_by_plane(polygon_pointer, vertex_nb, polygon_buffer, polygon_buffer_nb, current_seed, j, seeds_pointer, seeds_nb);
-			swap_polygons(polygon_pointer, vertex_nb, polygon_buffer, polygon_buffer_nb);
+			clip_by_plane(current_polygon, polygon_buffer, current_seed, j, seeds_pointer, seeds_nb);
+			swap_polygons(current_polygon, polygon_buffer);
 		}
 	}
 	return;
 }
 
-/*
-	device function
-	compute the intersection of a facet and a seed(a cell)
 
-	input:
 
-*/
+
 __device__
-void intersection_clip_facet(double* polygon_pointer, int& vertex_nb, int current_seed, double* seeds_pointer, int seeds_nb)
+void action(const Cuda_Polygon polygon, int current_seed)
 {
-	double3 current_seed_pos = { seeds_pointer[current_seed * 3 + 0],
-		seeds_pointer[current_seed * 3 + 1],
-		seeds_pointer[current_seed * 3 + 2] };
+	double weight;
+	double3 position;
 
-	int* seeds_neighbors = (int*)malloc(sizeof(int) * 20);
-	findNearestPoints(current_seed_pos, seeds_pointer, seeds_nb, seeds_neighbors, 20);
+	int _v1 = 0;
+	int _v2, _v3;
 
-	////set a buffer pointer to store the polygon
-	double* polygon_buffer = (double*)malloc(sizeof(double) * 10 * 4);
-	int polygon_buffer_nb = 0;
+	double3 pos1, pos2, pos3;
+	double d1, d2, d3;
+	int triangle_nb = polygon.vertex_nb - 2;
 
-	for (int i = 0; i < 20; ++i)
+	double total_weight = 0.0;
+	double3 centriodTimesWeight = { 0.0, 0.0, 0.0 };
+
+	double current_weight = 0.0;
+	double3 current_posTimesWeight = { 0.0, 0.0, 0.0 };
+
+	for (int i = 1; i < polygon.vertex_nb - 1; ++i)
 	{
-		int j = seeds_neighbors[i];
+		_v2 = i; _v3 = i + 1;
 
-		if (current_seed != j)
-		{ 
-			clip_by_plane(polygon_pointer, vertex_nb, polygon_buffer, polygon_buffer_nb, current_seed, j, seeds_pointer, seeds_nb);
-			swap_polygons(polygon_pointer, vertex_nb, polygon_buffer, polygon_buffer_nb);
-		}
+		pos1 = { polygon.vertex[_v1].x, polygon.vertex[_v1].y, polygon.vertex[_v1].z };
+		d1 = polygon.vertex[_v1].w;
+
+		pos2 = { polygon.vertex[_v2].x, polygon.vertex[_v2].y, polygon.vertex[_v2].z };
+		d2 = polygon.vertex[_v2].w;
+
+		pos3 = { polygon.vertex[_v3].x, polygon.vertex[_v3].y, polygon.vertex[_v3].z };
+		d3 = polygon.vertex[_v3].w;
+
+		computeTriangleCentriod(pos1, pos2, pos3, d1, d2, d3, centriodTimesWeight, total_weight);
+
+		current_weight += total_weight;
+		current_posTimesWeight.x += centriodTimesWeight.x;
+		current_posTimesWeight.y += centriodTimesWeight.y;
+		current_posTimesWeight.z += centriodTimesWeight.z;
+
+		total_weight = 0.0;
+		centriodTimesWeight = { 0.0, 0.0, 0.0 };
 	}
-	free(seeds_neighbors);
-	free(polygon_buffer);
+
+	atomicAdd(&SeedsPolygon_nb[current_seed], 1);
+	if (triangle_nb > 0){
+
+		current_weight /= triangle_nb;
+
+		double3 temp_pos;
+
+		temp_pos.x = current_posTimesWeight.x / triangle_nb;
+		temp_pos.y = current_posTimesWeight.y / triangle_nb;
+		temp_pos.z = current_posTimesWeight.z / triangle_nb;
+
+
+		//try not to use the MyAtomicAdd
+		//SeedsInformation[current_seed * 4 + 0] += temp_pos.x;
+		//SeedsInformation[current_seed * 4 + 1] += temp_pos.y;
+		//SeedsInformation[current_seed * 4 + 2] += temp_pos.z;
+		//SeedsInformation[current_seed * 4 + 3] += current_weight;
+
+		MyAtomicAdd(&SeedsInformation[current_seed * 4 + 0], temp_pos.x);
+		MyAtomicAdd(&SeedsInformation[current_seed * 4 + 1], temp_pos.y);
+		MyAtomicAdd(&SeedsInformation[current_seed * 4 + 2], temp_pos.z);
+		MyAtomicAdd(&SeedsInformation[current_seed * 4 + 3], current_weight);
+	}
 }
 
 __global__
@@ -350,8 +322,6 @@ int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_
 		SeedsInformation[tid * 4 + 2] = 0.0;
 		SeedsInformation[tid * 4 + 3] = 0.0;
 	}
-
-	int* k_indexes = &facet_center_neighbor_index[tid * k];
 
 	int f_idx1 = mesh_facet[tid * 3 + 0];
 	int f_idx2 = mesh_facet[tid * 3 + 1];
@@ -371,111 +341,86 @@ int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_
 		mesh_vertex[facet_index.z * 3 + 1],
 		mesh_vertex[facet_index.z * 3 + 2] };
 
-	double polygon[40];
-	int vertex_nb;
+	Cuda_Polygon current_polygon;
+	current_polygon.vertex_nb = 3;
 
+	//intialize the polygon with the 3 vertex of the current facet
 	/*
-		get the nearest k points' index
-		clip the facet
-		*/
-	for (int i = 0; i < k; ++i)
+	polygon pointer can be apart by several vertex
+	a vertex is made up with x,y,z,w
+	w : the weight of a vertex
+	*/
+	
+	current_polygon.vertex[0].x = v1.x; current_polygon.vertex[0].y = v1.y; current_polygon.vertex[0].z = v1.z; current_polygon.vertex[0].w = 1.0;
+	current_polygon.vertex[1].x = v2.x; current_polygon.vertex[1].y = v2.y; current_polygon.vertex[1].z = v2.z; current_polygon.vertex[1].w = 1.0;
+	current_polygon.vertex[2].x = v3.x; current_polygon.vertex[2].y = v3.y; current_polygon.vertex[2].z = v3.z; current_polygon.vertex[2].w = 1.0;
+	
+	/*if (tid == 0)
 	{
-		int current_seed = facet_center_neighbor_index[k * tid + i];
-		vertex_nb = 3;
+		ret_seeds[0] = current_polygon.vertex[0].x;
+		ret_seeds[1] = current_polygon.vertex[0].y;
+		ret_seeds[2] = current_polygon.vertex[0].z;
+		ret_seeds[3] = current_polygon.vertex[0].w;
+		ret_seeds[4] = current_polygon.vertex[0].neigh_s;
+	}*/
+	
+	//doesn't have the stack?
+	int to_visit[CUDA_Stack_size];
+	int to_visit_pos = 0;
 
-		//intialize the polygon with the 3 vertex of the current facet
-		/*
-		polygon pointer can be apart by several vertex
-		a vertex is made up with x,y,z,w
-		w : the weight of a vertex
-		*/
-		polygon[0] = v1.x; polygon[1] = v1.y; polygon[2] = v1.z; polygon[3] = 1.0;
-		polygon[4] = v2.x; polygon[5] = v2.y; polygon[6] = v2.z; polygon[7] = 1.0;
-		polygon[8] = v3.x; polygon[9] = v3.y; polygon[10] = v3.z; polygon[11] = 1.0;
+	int has_visited[CUDA_Stack_size];
+	int has_visited_nb = 0;
+	bool has_visited_flag = false;
+	
+	to_visit[to_visit_pos++] = facet_center_neighbor_index[tid];
+	has_visited[has_visited_nb++] = to_visit[0];
+	while (to_visit_pos){
+		int current_seed = to_visit[to_visit_pos - 1];
+		to_visit_pos--;
+
+		intersection_clip_facet_with_knn(current_polygon, current_seed, seeds_pointer, seeds_nb, seeds_neighbor_index, k);
 		
-		
-		intersection_clip_facet_with_knn(polygon, vertex_nb, current_seed, seeds_pointer, seeds_nb, seeds_neighbor_index, k, tid, i);
-		
+		//use the RVD
+		//action(current_polygon, current_seed);
+
 		//now we get the clipped polygon stored in "polygon"
 		//take care of the sychonize
 		//change the polygon data into "weight" and "position"
-		if (vertex_nb == 0)
-			break;
-
-		double weight;
-		double3 position;
-
-		int _v1 = 0;
-		int _v2, _v3;
-
-		double3 pos1, pos2, pos3;
-		double d1, d2, d3;
-		int triangle_nb = vertex_nb - 2;
-
-		double total_weight = 0.0;
-		double3 centriodTimesWeight = { 0.0, 0.0, 0.0 };
-
-		double current_weight = 0.0;
-		double3 current_posTimesWeight = { 0.0, 0.0, 0.0 };
-
-		for (int i = 1; i < vertex_nb - 1; ++i)
-		{
-			_v2 = i; _v3 = i + 1;
-
-			pos1 = { polygon[_v1 * 4 + 0], polygon[_v1 * 4 + 1], polygon[_v1 * 4 + 2] };
-			d1 = polygon[_v1 * 4 + 3];
-
-			pos2 = { polygon[_v2 * 4 + 0], polygon[_v2 * 4 + 1], polygon[_v2 * 4 + 2] };
-			d2 = polygon[_v2 * 4 + 3];
-
-			pos3 = { polygon[_v3 * 4 + 0], polygon[_v3 * 4 + 1], polygon[_v3 * 4 + 2] };
-			d3 = polygon[_v3 * 4 + 3];
-
-			computeTriangleCentriod(pos1, pos2, pos3, d1, d2, d3, centriodTimesWeight, total_weight);
-
-			current_weight += total_weight;
-			current_posTimesWeight.x += centriodTimesWeight.x;
-			current_posTimesWeight.y += centriodTimesWeight.y;
-			current_posTimesWeight.z += centriodTimesWeight.z;
-
-			total_weight = 0.0;
-			centriodTimesWeight = { 0.0, 0.0, 0.0 };
-		}
-
-		//atomicAdd(&SeedsPolygon_nb[current_seed], 1);
-		if (triangle_nb > 0){
-
-			current_weight /= triangle_nb;
-
-			double3 temp_pos;
-
-			temp_pos.x = current_posTimesWeight.x / triangle_nb;
-			temp_pos.y = current_posTimesWeight.y / triangle_nb;
-			temp_pos.z = current_posTimesWeight.z / triangle_nb;
-
-
-			//try not to use the MyAtomicAdd
-			SeedsInformation[current_seed * 4 + 0] += temp_pos.x;
-			SeedsInformation[current_seed * 4 + 1] += temp_pos.y;
-			SeedsInformation[current_seed * 4 + 2] += temp_pos.z;
-			SeedsInformation[current_seed * 4 + 3] += current_weight;
-
-			/*MyAtomicAdd(&SeedsInformation[current_seed * 4 + 0], temp_pos.x);
-			MyAtomicAdd(&SeedsInformation[current_seed * 4 + 1], temp_pos.y);
-			MyAtomicAdd(&SeedsInformation[current_seed * 4 + 2], temp_pos.z);
-			MyAtomicAdd(&SeedsInformation[current_seed * 4 + 3], current_weight);*/
-		}
 		
+		//Propagate to adjacent seeds
+		for (int v = 0; v < current_polygon.vertex_nb; ++v)
+		{
+			Cuda_Vertex ve = current_polygon.vertex[v];
+			int ns = ve.neigh_s;
+			if (ns != -1)
+			{
+				for (int ii = 0; ii < has_visited_nb; ++ii)
+				{
+					//if the neighbor seed has clipped the polygon
+					//the flag should be set "true"
+					if (has_visited[ii] == ns)
+						has_visited_flag = true;
+				}
+				//the neighbor seed is new!
+				if (!has_visited_flag)
+				{
+					to_visit[to_visit_pos++] = ns;
+					has_visited[has_visited_nb++] = ns;
+				}
+				has_visited_flag = false;
+			}
+		}
 	}
-	__syncthreads();
+
+	//__syncthreads();
 	
-	for (int i = 0; i < seeds_nb * 4; ++i)
-	{
-		ret_seeds[i] = SeedsInformation[i];
-	}
+	//for (int i = 0; i < seeds_nb * 4; ++i)
+	//{
+	//	ret_seeds[i] = SeedsInformation[i];
+	//}
 	//for (int i = 0; i < seeds_nb; ++i)
 	//{
-	//	  test_seeds[i] = SeedsPolygon_nb[i];
+	//	ret_seeds[i] = SeedsPolygon_nb[i];
 	//}
 	return;
 }
@@ -484,332 +429,333 @@ int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_
 /*
 	a thread to compute the RVD in parallel way
 */
-__global__ 
-void compute_RVD(double* seeds_pointer, int seeds_nb,
-double* mesh_vertex, int mesh_vertex_nb,
-int* mesh_facet, int mesh_facet_nb, double* ret_seeds,
-double* test_dis, double* test_centriod,
-int* test_index, double* test_seeds,
-int* test_polygon_nb)
-{
-	int tid = blockIdx.x * blockDim.x + threadIdx.x;
-
-	//有多少个facet,开启多少个线程,用tid进行索引
-	if (tid < mesh_facet_nb){
-		//得到对应facet的三个索引
-		int f_idx1 = mesh_facet[tid * 3 + 0];
-		int f_idx2 = mesh_facet[tid * 3 + 1];
-		int f_idx3 = mesh_facet[tid * 3 + 2];
-
-		int3 facet_index = { f_idx1, f_idx2, f_idx3 };
-
-		double3 v1 = { mesh_vertex[facet_index.x * 3 + 0],
-			mesh_vertex[facet_index.x * 3 + 1],
-			mesh_vertex[facet_index.x * 3 + 2] };
-
-		double3 v2 = { mesh_vertex[facet_index.y * 3 + 0],
-			mesh_vertex[facet_index.y * 3 + 1],
-			mesh_vertex[facet_index.y * 3 + 2] };
-
-		double3 v3 = { mesh_vertex[facet_index.z * 3 + 0],
-			mesh_vertex[facet_index.z * 3 + 1],
-			mesh_vertex[facet_index.z * 3 + 2] };
-
-
-		double3 centriod = computeCentriod(v1, v2, v3);
-
-		
-		int* nearest_points = (int*)malloc(sizeof(int) * 20);
-
-		findNearestPoints(centriod, seeds_pointer, seeds_nb, nearest_points, 20);
-
-		if (tid == 0)
-		{
-			test_dis[0] = v1.x;
-			test_dis[1] = v1.y;
-			test_dis[2] = v1.z;
-			test_dis[3] = v2.x;
-			test_dis[4] = v2.y;
-			test_dis[5] = v2.z;
-			test_dis[6] = v3.x;
-			test_dis[7] = v3.y;
-			test_dis[8] = v3.z;
-
-			test_centriod[0] = centriod.x;
-			test_centriod[1] = centriod.y;
-			test_centriod[2] = centriod.z;
-
-			test_index[21] = seeds_nb;
-
-			for (int i = 0; i < 20; ++i)
-			{
-				test_index[i] = nearest_points[i];
-			}
-		}
-		return;
-
-		double* polygon = (double*)malloc(sizeof(double) * 10 * 4);
-		int vertex_nb;
-		/*
-			get the nearest 20 points' index
-			clip the facet
-			*/
-		for (int i = 0; i < 20; ++i)
-		{
-			int current_seed = nearest_points[i];
-
-			vertex_nb = 3;
-
-			//intialize the polygon with the 3 vertex of the current facet
-			/*
-				polygon pointer can be apart by several vertex
-				a vertex is made up with x,y,z,w
-				w : the weight of a vertex
-				*/
-			polygon[0] = v1.x; polygon[1] = v1.y; polygon[2] = v1.z; polygon[3] = 1.0;
-			polygon[4] = v2.x; polygon[5] = v2.y; polygon[6] = v2.z; polygon[7] = 1.0;
-			polygon[8] = v3.x; polygon[9] = v3.y; polygon[10] = v3.z; polygon[11] = 1.0;
-
-			intersection_clip_facet(polygon, vertex_nb, current_seed, seeds_pointer, seeds_nb);
-
-			//now we get the clipped polygon stored in "polygon"
-			//take care of the sychonize
-			//change the polygon data into "weight" and "position"
-			if (vertex_nb == 0)
-				break;
-
-			double weight;
-			double3 position;
-
-			int _v1 = 0;
-			int _v2, _v3;
-
-			double3 pos1, pos2, pos3;
-			double d1, d2, d3;
-			int triangle_nb = vertex_nb - 2;
-
-			double total_weight = 0.0;
-			double3 centriodTimesWeight = { 0.0, 0.0, 0.0 };
-
-			double current_weight = 0.0;
-			double3 current_posTimesWeight = { 0.0, 0.0, 0.0 };
-
-			for (int i = 1; i < vertex_nb - 1; ++i)
-			{
-				_v2 = i; _v3 = i + 1;
-
-				pos1 = { polygon[_v1 * 4 + 0], polygon[_v1 * 4 + 1], polygon[_v1 * 4 + 2] };
-				d1 = polygon[_v1 * 4 + 3];
-
-				pos2 = { polygon[_v2 * 4 + 0], polygon[_v2 * 4 + 1], polygon[_v2 * 4 + 2] };
-				d2 = polygon[_v2 * 4 + 3];
-
-				pos3 = { polygon[_v3 * 4 + 0], polygon[_v3 * 4 + 1], polygon[_v3 * 4 + 2] };
-				d3 = polygon[_v3 * 4 + 3];
-
-				computeTriangleCentriod(pos1, pos2, pos3, d1, d2, d3, centriodTimesWeight, total_weight);
-
-				current_weight += total_weight;
-				current_posTimesWeight.x += centriodTimesWeight.x;
-				current_posTimesWeight.y += centriodTimesWeight.y;
-				current_posTimesWeight.z += centriodTimesWeight.z;
-
-				total_weight = 0.0;
-				centriodTimesWeight = { 0.0, 0.0, 0.0 };
-			}
-
-			//atomicAdd(&SeedsPolygon_nb[current_seed], 1);
-			if (current_weight != 0 && triangle_nb > 0){
-				current_posTimesWeight.x /= current_weight;
-				current_posTimesWeight.y /= current_weight;
-				current_posTimesWeight.z /= current_weight;
-
-				current_weight /= triangle_nb;
-
-				double3 temp_pos;
-
-				temp_pos.x = current_posTimesWeight.x * current_weight;
-				temp_pos.y = current_posTimesWeight.y * current_weight;
-				temp_pos.z = current_posTimesWeight.z * current_weight;
-
-				MyAtomicAdd(&SeedsInformation[current_seed * 4 + 0], temp_pos.x);
-				MyAtomicAdd(&SeedsInformation[current_seed * 4 + 1], temp_pos.y);
-				MyAtomicAdd(&SeedsInformation[current_seed * 4 + 2], temp_pos.z);
-				MyAtomicAdd(&SeedsInformation[current_seed * 4 + 3], current_weight);
-
-
-			}
-			/*------------------------ test part -------------------------*/
-			if (tid == 0 && i == 0)
-			{
-				test_index[0] = current_seed;
-				for (int i = 0; i < 20; ++i)
-				{
-					test_index[i + 1] = nearest_points[i];
-				}
-
-				test_dis[0] = v1.x;
-				test_dis[1] = v1.y;
-				test_dis[2] = v1.z;
-				test_dis[3] = v2.x;
-				test_dis[4] = v2.y;
-				test_dis[5] = v2.z;
-				test_dis[6] = v3.x;
-				test_dis[7] = v3.y;
-				test_dis[8] = v3.z;
-			}
-
-		}
-		__syncthreads();
-		for (int i = 0; i < 100; ++i)
-		{
-			ret_seeds[i] = SeedsInformation[i];
-		}
-		free(nearest_points);
-		free(polygon);
-	}
-}
-extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_pointer,
-	int* host_facet_index, int points_nb, int mesh_vertex_nb, int mesh_facet_nb)
-{
-	double* dev_seeds_pointer;
-	double* dev_mesh_vertex_pointer;
-	int* dev_mesh_facet_index;
-
-	double* dev_seedsInformation;
-
-	double* host_test_seeds = (double*)malloc(sizeof(double) *  points_nb * 4);
-	double* dev_test_seeds;
-	//test data
-	
-	double* host_test_dis = (double*)malloc(sizeof(double) * points_nb);
-	double* dev_test_dis;
-
-	double* host_test_cen = (double*)malloc(sizeof(double) * 3);
-	double* dev_test_center;
-
-	int* dev_seedsPolyonNumber;
-
-	int* host_test_index = (int*)malloc(sizeof(int) * points_nb);
-	int* dev_test_index;
-
-	int* host_test_polygon = (int*)malloc(sizeof(int) * points_nb);
-	int* dev_test_polygon;
-	
-	checkCudaErrors(cudaSetDevice(0));
-	
-	//allocate the memory
-	checkCudaErrors(cudaMalloc((void**)&dev_seeds_pointer, sizeof(double) * points_nb * 3));
-	checkCudaErrors(cudaMalloc((void**)&dev_mesh_vertex_pointer, sizeof(double) * mesh_vertex_nb * 3));
- 	checkCudaErrors(cudaMalloc((void**)&dev_mesh_facet_index, sizeof(int) * mesh_facet_nb * 3));
- 	checkCudaErrors(cudaMalloc((void**)&dev_seedsInformation, sizeof(double) * points_nb * 4));
-	//checkCudaErrors(cudaMalloc((void**)&dev_seedsPolyonNumber, sizeof(int) * points_nb));
-	checkCudaErrors(cudaMalloc((void**)&dev_test_seeds, sizeof(double) * points_nb * 4));
-
-
-	//allocate test memory
-
-	checkCudaErrors(cudaMalloc((void**)&dev_test_dis, sizeof(double) * points_nb));
-	checkCudaErrors(cudaMalloc((void**)&dev_test_center, sizeof(double) * 3));
-	checkCudaErrors(cudaMalloc((void**)&dev_test_index, sizeof(int) * points_nb));
-	
-	checkCudaErrors(cudaMalloc((void**)&dev_test_polygon, sizeof(int) * points_nb));
-	
-	//pass the data from host to device
-	checkCudaErrors(cudaMemcpy(dev_seeds_pointer, host_seeds_pointer, sizeof(double) * points_nb * 3, cudaMemcpyHostToDevice));
-	checkCudaErrors(cudaMemcpy(dev_mesh_vertex_pointer, host_mesh_vertex_pointer, sizeof(double) * mesh_vertex_nb * 3, cudaMemcpyHostToDevice));
-	checkCudaErrors(cudaMemcpy(dev_mesh_facet_index, host_facet_index, sizeof(int) * mesh_facet_nb * 3, cudaMemcpyHostToDevice));
-
-	checkCudaErrors(cudaMemcpyToSymbol(SeedsInformation, &dev_seedsInformation, sizeof(double*), size_t(0), cudaMemcpyHostToDevice));
-	/*checkCudaErrors(cudaMemcpyToSymbol(SeedsPolygon_nb, &dev_seedsPolyonNumber, sizeof(int*), size_t(0), cudaMemcpyHostToDevice));*/
-	
-	int x = (int)sqrt(mesh_facet_nb);
-	int y = (int)(mesh_facet_nb / x + 1);
-	//set the block
-	compute_RVD << < x, y >> >(dev_seeds_pointer, points_nb, dev_mesh_vertex_pointer, mesh_vertex_nb, dev_mesh_facet_index, mesh_facet_nb, dev_test_seeds,
-		dev_test_dis, dev_test_center, dev_test_index, dev_test_seeds, dev_test_polygon);
-	
-	checkCudaErrors(cudaDeviceSynchronize());
-
-	checkCudaErrors(cudaMemcpy(host_test_dis, dev_test_dis, sizeof(double) * points_nb, cudaMemcpyDeviceToHost));
-	checkCudaErrors(cudaMemcpy(host_test_cen, dev_test_center, sizeof(double) * 3, cudaMemcpyDeviceToHost));
-	checkCudaErrors(cudaMemcpy(host_test_index, dev_test_index, sizeof(int) * points_nb, cudaMemcpyDeviceToHost));
-	checkCudaErrors(cudaMemcpy(host_test_polygon, dev_test_polygon, sizeof(int) * points_nb, cudaMemcpyDeviceToHost));
-	
-	checkCudaErrors(cudaMemcpy(host_test_seeds, dev_test_seeds, sizeof(double) * points_nb * 4, cudaMemcpyDeviceToHost));
-	printf("Thread 1:\n");
-	printf("centriod : %.6lf, %.6lf, %.6lf \n", host_test_cen[0], host_test_cen[1], host_test_cen[2]);
-	printf("seeds_nb : %d \n", host_test_index[21]);
-	printf("v1 : %.6lf, %.6lf, %.6lf \n", host_test_dis[0], host_test_dis[1], host_test_dis[2]);
-	printf("v2 : %.6lf, %.6lf, %.6lf \n", host_test_dis[3], host_test_dis[4], host_test_dis[5]);
-	printf("v3 : %.6lf, %.6lf, %.6lf \n", host_test_dis[6], host_test_dis[7], host_test_dis[8]);
-	printf("nearest 20 points' index:\n");
-	for (int i = 0; i < 20; ++i)
-	{
-		printf("%d  : %d  \n",i, host_test_index[i]);
-	}
-	return;
-	//printf("current seed : %d\n", host_test_index[41]);
-	//printf("current seed position : %.17lf, %.17lf, %.17lf \n", host_test_dis[3], host_test_dis[4], host_test_dis[5]);
-
-	//printf("the 20 seeds near the current seed\n");
-	//for (int i = 0; i < 20; ++i)
-	//{
-	//	printf("%d  : %d  \n",i, host_test_index[i + 21]);
-	//}
-
-	//printf(" %d 和 %d 确定平面\n", host_test_index[41], host_test_index[42]);
-	//printf("原polygon:\n");
-	//printf("vertex number : %d\n", host_test_index[43]);
-
-	//for (int i = 0; i < host_test_index[43]; ++i)
-	//{
-	//	printf("x : %.17lf, y: %.17lf, z : %.17lf, w : %.6lf\n\n", host_test_dis[6 + i * 4 + 0], host_test_dis[6 + i * 4 + 1], host_test_dis[6 + i * 4 + 2], host_test_dis[6 + i * 4 + 3]);
-	//}
-	//printf("现polygon:\n");
-	//printf("vertex number : %d   buffer vertex number : %d\n", host_test_index[44], host_test_index[45]);
-	//for (int i = 0; i < host_test_index[44]; ++i)
-	//{
-	//	printf("x : %.17lf, y: %.17lf, z : %.17lf, w : %.6lf\n\n", host_test_dis[101 + i * 4 + 0], host_test_dis[101 + i * 4 + 1], host_test_dis[101 + i * 4 + 2], host_test_dis[101 + i * 4 + 3]);
-	//}
-
-	//printf("增加的点\n");
-	//for (int i = 0; i < 4; ++i)
-	//{
-	//	printf("x : %.17lf, y: %.17lf, z : %.17lf, w : %.6lf\n\n", host_test_dis[150 + i * 4 + 0], host_test_dis[150 + i * 4 + 1], host_test_dis[150 + i * 4 + 2], host_test_dis[150 + i * 4 + 3]);
-	//}
-
-	//printf("thread 1, facet 1, current seed : %d clipped polygon vertex number : %d\n",host_test_index[20], host_test_index[88]);
-	//printf("successfully running!\n");
-
-	ofstream fout("d.txt");
-	//printf("test : %d current seed :%d  vertex number : %d\n",host_test_index[1], host_test_index[2], host_test_index[3]);
-	//fout << "seed 185  nearest points" << endl;
-	//for (int i = 0; i < 20; ++i)
-	//{
-	//	fout << host_test_index[i] << endl;
-	//}
-	////fout << "v1 : " << host_test_dis[0] << host_test_dis[1] << host_test_dis[2] << endl;
-	////fout << "v2 : " << host_test_dis[0] << host_test_dis[1] << host_test_dis[2] << endl;
-	////fout << "v2 : " << host_test_dis[0] << host_test_dis[1] << host_test_dis[2] << endl;
-
-	for (int i = 0; i < points_nb; ++i)
-	{
-		if (host_test_seeds[i * 4 + 3] != 0){
-			host_test_seeds[i * 4 + 0] /= host_test_seeds[i * 4 + 3];
-			host_test_seeds[i * 4 + 1] /= host_test_seeds[i * 4 + 3];
-			host_test_seeds[i * 4 + 2] /= host_test_seeds[i * 4 + 3];
-		}
-		//printf("seeds %d : %.16lf, %.16lf, %.16lf, , %.16lf \n", i, host_test_seeds[i * 4 + 0]
-			//, host_test_seeds[i * 4 + 1], host_test_seeds[i * 4 + 2], host_test_seeds[i * 4 + 3]);
-		
-		fout << i << ':' << setprecision(16) <<host_test_seeds[i * 4 + 0] << ' ' << host_test_seeds[i * 4 + 1] << ' ' << host_test_seeds[i * 4 + 2] << ' ' << host_test_seeds[i * 4 + 3] << endl;
-	}
-	/*for (int i = 0; i < points_nb; ++i)
-	{
-		fout << i << ':' << host_test_polygon[i] << endl;
-	}*/
-}
+//__global__ 
+//void compute_RVD(double* seeds_pointer, int seeds_nb,
+//double* mesh_vertex, int mesh_vertex_nb,
+//int* mesh_facet, int mesh_facet_nb, double* ret_seeds,
+//double* test_dis, double* test_centriod,
+//int* test_index, double* test_seeds,
+//int* test_polygon_nb)
+//{
+//	int tid = blockIdx.x * blockDim.x + threadIdx.x;
+//
+//	//有多少个facet,开启多少个线程,用tid进行索引
+//	if (tid < mesh_facet_nb){
+//		//得到对应facet的三个索引
+//		int f_idx1 = mesh_facet[tid * 3 + 0];
+//		int f_idx2 = mesh_facet[tid * 3 + 1];
+//		int f_idx3 = mesh_facet[tid * 3 + 2];
+//
+//		int3 facet_index = { f_idx1, f_idx2, f_idx3 };
+//
+//		double3 v1 = { mesh_vertex[facet_index.x * 3 + 0],
+//			mesh_vertex[facet_index.x * 3 + 1],
+//			mesh_vertex[facet_index.x * 3 + 2] };
+//
+//		double3 v2 = { mesh_vertex[facet_index.y * 3 + 0],
+//			mesh_vertex[facet_index.y * 3 + 1],
+//			mesh_vertex[facet_index.y * 3 + 2] };
+//
+//		double3 v3 = { mesh_vertex[facet_index.z * 3 + 0],
+//			mesh_vertex[facet_index.z * 3 + 1],
+//			mesh_vertex[facet_index.z * 3 + 2] };
+//
+//
+//		double3 centriod = computeCentriod(v1, v2, v3);
+//
+//		
+//		int* nearest_points = (int*)malloc(sizeof(int) * 20);
+//
+//		findNearestPoints(centriod, seeds_pointer, seeds_nb, nearest_points, 20);
+//
+//		if (tid == 0)
+//		{
+//			test_dis[0] = v1.x;
+//			test_dis[1] = v1.y;
+//			test_dis[2] = v1.z;
+//			test_dis[3] = v2.x;
+//			test_dis[4] = v2.y;
+//			test_dis[5] = v2.z;
+//			test_dis[6] = v3.x;
+//			test_dis[7] = v3.y;
+//			test_dis[8] = v3.z;
+//
+//			test_centriod[0] = centriod.x;
+//			test_centriod[1] = centriod.y;
+//			test_centriod[2] = centriod.z;
+//
+//			test_index[21] = seeds_nb;
+//
+//			for (int i = 0; i < 20; ++i)
+//			{
+//				test_index[i] = nearest_points[i];
+//			}
+//		}
+//		return;
+//
+//		double* polygon = (double*)malloc(sizeof(double) * 10 * 4);
+//		int vertex_nb;
+//		/*
+//			get the nearest 20 points' index
+//			clip the facet
+//			*/
+//		for (int i = 0; i < 20; ++i)
+//		{
+//			int current_seed = nearest_points[i];
+//
+//			vertex_nb = 3;
+//
+//			//intialize the polygon with the 3 vertex of the current facet
+//			/*
+//				polygon pointer can be apart by several vertex
+//				a vertex is made up with x,y,z,w
+//				w : the weight of a vertex
+//				*/
+//			polygon[0] = v1.x; polygon[1] = v1.y; polygon[2] = v1.z; polygon[3] = 1.0;
+//			polygon[4] = v2.x; polygon[5] = v2.y; polygon[6] = v2.z; polygon[7] = 1.0;
+//			polygon[8] = v3.x; polygon[9] = v3.y; polygon[10] = v3.z; polygon[11] = 1.0;
+//
+//			intersection_clip_facet(polygon, vertex_nb, current_seed, seeds_pointer, seeds_nb);
+//
+//			//now we get the clipped polygon stored in "polygon"
+//			//take care of the sychonize
+//			//change the polygon data into "weight" and "position"
+//			if (vertex_nb == 0)
+//				break;
+//
+//			double weight;
+//			double3 position;
+//
+//			int _v1 = 0;
+//			int _v2, _v3;
+//
+//			double3 pos1, pos2, pos3;
+//			double d1, d2, d3;
+//			int triangle_nb = vertex_nb - 2;
+//
+//			double total_weight = 0.0;
+//			double3 centriodTimesWeight = { 0.0, 0.0, 0.0 };
+//
+//			double current_weight = 0.0;
+//			double3 current_posTimesWeight = { 0.0, 0.0, 0.0 };
+//
+//			for (int i = 1; i < vertex_nb - 1; ++i)
+//			{
+//				_v2 = i; _v3 = i + 1;
+//
+//				pos1 = { polygon[_v1 * 4 + 0], polygon[_v1 * 4 + 1], polygon[_v1 * 4 + 2] };
+//				d1 = polygon[_v1 * 4 + 3];
+//
+//				pos2 = { polygon[_v2 * 4 + 0], polygon[_v2 * 4 + 1], polygon[_v2 * 4 + 2] };
+//				d2 = polygon[_v2 * 4 + 3];
+//
+//				pos3 = { polygon[_v3 * 4 + 0], polygon[_v3 * 4 + 1], polygon[_v3 * 4 + 2] };
+//				d3 = polygon[_v3 * 4 + 3];
+//
+//				computeTriangleCentriod(pos1, pos2, pos3, d1, d2, d3, centriodTimesWeight, total_weight);
+//
+//				current_weight += total_weight;
+//				current_posTimesWeight.x += centriodTimesWeight.x;
+//				current_posTimesWeight.y += centriodTimesWeight.y;
+//				current_posTimesWeight.z += centriodTimesWeight.z;
+//
+//				total_weight = 0.0;
+//				centriodTimesWeight = { 0.0, 0.0, 0.0 };
+//			}
+//
+//			//atomicAdd(&SeedsPolygon_nb[current_seed], 1);
+//			if (current_weight != 0 && triangle_nb > 0){
+//				current_posTimesWeight.x /= current_weight;
+//				current_posTimesWeight.y /= current_weight;
+//				current_posTimesWeight.z /= current_weight;
+//
+//				current_weight /= triangle_nb;
+//
+//				double3 temp_pos;
+//
+//				temp_pos.x = current_posTimesWeight.x * current_weight;
+//				temp_pos.y = current_posTimesWeight.y * current_weight;
+//				temp_pos.z = current_posTimesWeight.z * current_weight;
+//
+//				MyAtomicAdd(&SeedsInformation[current_seed * 4 + 0], temp_pos.x);
+//				MyAtomicAdd(&SeedsInformation[current_seed * 4 + 1], temp_pos.y);
+//				MyAtomicAdd(&SeedsInformation[current_seed * 4 + 2], temp_pos.z);
+//				MyAtomicAdd(&SeedsInformation[current_seed * 4 + 3], current_weight);
+//
+//
+//			}
+//			/*------------------------ test part -------------------------*/
+//			if (tid == 0 && i == 0)
+//			{
+//				test_index[0] = current_seed;
+//				for (int i = 0; i < 20; ++i)
+//				{
+//					test_index[i + 1] = nearest_points[i];
+//				}
+//
+//				test_dis[0] = v1.x;
+//				test_dis[1] = v1.y;
+//				test_dis[2] = v1.z;
+//				test_dis[3] = v2.x;
+//				test_dis[4] = v2.y;
+//				test_dis[5] = v2.z;
+//				test_dis[6] = v3.x;
+//				test_dis[7] = v3.y;
+//				test_dis[8] = v3.z;
+//			}
+//
+//		}
+//		__syncthreads();
+//		for (int i = 0; i < 100; ++i)
+//		{
+//			ret_seeds[i] = SeedsInformation[i];
+//		}
+//		free(nearest_points);
+//		free(polygon);
+//	}
+//}
+//
+//extern "C" void runCuda(double* host_seeds_pointer, double* host_mesh_vertex_pointer,
+//	int* host_facet_index, int points_nb, int mesh_vertex_nb, int mesh_facet_nb)
+//{
+//	double* dev_seeds_pointer;
+//	double* dev_mesh_vertex_pointer;
+//	int* dev_mesh_facet_index;
+//
+//	double* dev_seedsInformation;
+//
+//	double* host_test_seeds = (double*)malloc(sizeof(double) *  points_nb * 4);
+//	double* dev_test_seeds;
+//	//test data
+//	
+//	double* host_test_dis = (double*)malloc(sizeof(double) * points_nb);
+//	double* dev_test_dis;
+//
+//	double* host_test_cen = (double*)malloc(sizeof(double) * 3);
+//	double* dev_test_center;
+//
+//	int* dev_seedsPolyonNumber;
+//
+//	int* host_test_index = (int*)malloc(sizeof(int) * points_nb);
+//	int* dev_test_index;
+//
+//	int* host_test_polygon = (int*)malloc(sizeof(int) * points_nb);
+//	int* dev_test_polygon;
+//	
+//	checkCudaErrors(cudaSetDevice(0));
+//	
+//	//allocate the memory
+//	checkCudaErrors(cudaMalloc((void**)&dev_seeds_pointer, sizeof(double) * points_nb * 3));
+//	checkCudaErrors(cudaMalloc((void**)&dev_mesh_vertex_pointer, sizeof(double) * mesh_vertex_nb * 3));
+// 	checkCudaErrors(cudaMalloc((void**)&dev_mesh_facet_index, sizeof(int) * mesh_facet_nb * 3));
+// 	checkCudaErrors(cudaMalloc((void**)&dev_seedsInformation, sizeof(double) * points_nb * 4));
+//	//checkCudaErrors(cudaMalloc((void**)&dev_seedsPolyonNumber, sizeof(int) * points_nb));
+//	checkCudaErrors(cudaMalloc((void**)&dev_test_seeds, sizeof(double) * points_nb * 4));
+//
+//
+//	//allocate test memory
+//
+//	checkCudaErrors(cudaMalloc((void**)&dev_test_dis, sizeof(double) * points_nb));
+//	checkCudaErrors(cudaMalloc((void**)&dev_test_center, sizeof(double) * 3));
+//	checkCudaErrors(cudaMalloc((void**)&dev_test_index, sizeof(int) * points_nb));
+//	
+//	checkCudaErrors(cudaMalloc((void**)&dev_test_polygon, sizeof(int) * points_nb));
+//	
+//	//pass the data from host to device
+//	checkCudaErrors(cudaMemcpy(dev_seeds_pointer, host_seeds_pointer, sizeof(double) * points_nb * 3, cudaMemcpyHostToDevice));
+//	checkCudaErrors(cudaMemcpy(dev_mesh_vertex_pointer, host_mesh_vertex_pointer, sizeof(double) * mesh_vertex_nb * 3, cudaMemcpyHostToDevice));
+//	checkCudaErrors(cudaMemcpy(dev_mesh_facet_index, host_facet_index, sizeof(int) * mesh_facet_nb * 3, cudaMemcpyHostToDevice));
+//
+//	checkCudaErrors(cudaMemcpyToSymbol(SeedsInformation, &dev_seedsInformation, sizeof(double*), size_t(0), cudaMemcpyHostToDevice));
+//	/*checkCudaErrors(cudaMemcpyToSymbol(SeedsPolygon_nb, &dev_seedsPolyonNumber, sizeof(int*), size_t(0), cudaMemcpyHostToDevice));*/
+//	
+//	int x = (int)sqrt(mesh_facet_nb);
+//	int y = (int)(mesh_facet_nb / x + 1);
+//	//set the block
+//	compute_RVD << < x, y >> >(dev_seeds_pointer, points_nb, dev_mesh_vertex_pointer, mesh_vertex_nb, dev_mesh_facet_index, mesh_facet_nb, dev_test_seeds,
+//		dev_test_dis, dev_test_center, dev_test_index, dev_test_seeds, dev_test_polygon);
+//	
+//	checkCudaErrors(cudaDeviceSynchronize());
+//
+//	checkCudaErrors(cudaMemcpy(host_test_dis, dev_test_dis, sizeof(double) * points_nb, cudaMemcpyDeviceToHost));
+//	checkCudaErrors(cudaMemcpy(host_test_cen, dev_test_center, sizeof(double) * 3, cudaMemcpyDeviceToHost));
+//	checkCudaErrors(cudaMemcpy(host_test_index, dev_test_index, sizeof(int) * points_nb, cudaMemcpyDeviceToHost));
+//	checkCudaErrors(cudaMemcpy(host_test_polygon, dev_test_polygon, sizeof(int) * points_nb, cudaMemcpyDeviceToHost));
+//	
+//	checkCudaErrors(cudaMemcpy(host_test_seeds, dev_test_seeds, sizeof(double) * points_nb * 4, cudaMemcpyDeviceToHost));
+//	printf("Thread 1:\n");
+//	printf("centriod : %.6lf, %.6lf, %.6lf \n", host_test_cen[0], host_test_cen[1], host_test_cen[2]);
+//	printf("seeds_nb : %d \n", host_test_index[21]);
+//	printf("v1 : %.6lf, %.6lf, %.6lf \n", host_test_dis[0], host_test_dis[1], host_test_dis[2]);
+//	printf("v2 : %.6lf, %.6lf, %.6lf \n", host_test_dis[3], host_test_dis[4], host_test_dis[5]);
+//	printf("v3 : %.6lf, %.6lf, %.6lf \n", host_test_dis[6], host_test_dis[7], host_test_dis[8]);
+//	printf("nearest 20 points' index:\n");
+//	for (int i = 0; i < 20; ++i)
+//	{
+//		printf("%d  : %d  \n",i, host_test_index[i]);
+//	}
+//	return;
+//	//printf("current seed : %d\n", host_test_index[41]);
+//	//printf("current seed position : %.17lf, %.17lf, %.17lf \n", host_test_dis[3], host_test_dis[4], host_test_dis[5]);
+//
+//	//printf("the 20 seeds near the current seed\n");
+//	//for (int i = 0; i < 20; ++i)
+//	//{
+//	//	printf("%d  : %d  \n",i, host_test_index[i + 21]);
+//	//}
+//
+//	//printf(" %d 和 %d 确定平面\n", host_test_index[41], host_test_index[42]);
+//	//printf("原polygon:\n");
+//	//printf("vertex number : %d\n", host_test_index[43]);
+//
+//	//for (int i = 0; i < host_test_index[43]; ++i)
+//	//{
+//	//	printf("x : %.17lf, y: %.17lf, z : %.17lf, w : %.6lf\n\n", host_test_dis[6 + i * 4 + 0], host_test_dis[6 + i * 4 + 1], host_test_dis[6 + i * 4 + 2], host_test_dis[6 + i * 4 + 3]);
+//	//}
+//	//printf("现polygon:\n");
+//	//printf("vertex number : %d   buffer vertex number : %d\n", host_test_index[44], host_test_index[45]);
+//	//for (int i = 0; i < host_test_index[44]; ++i)
+//	//{
+//	//	printf("x : %.17lf, y: %.17lf, z : %.17lf, w : %.6lf\n\n", host_test_dis[101 + i * 4 + 0], host_test_dis[101 + i * 4 + 1], host_test_dis[101 + i * 4 + 2], host_test_dis[101 + i * 4 + 3]);
+//	//}
+//
+//	//printf("增加的点\n");
+//	//for (int i = 0; i < 4; ++i)
+//	//{
+//	//	printf("x : %.17lf, y: %.17lf, z : %.17lf, w : %.6lf\n\n", host_test_dis[150 + i * 4 + 0], host_test_dis[150 + i * 4 + 1], host_test_dis[150 + i * 4 + 2], host_test_dis[150 + i * 4 + 3]);
+//	//}
+//
+//	//printf("thread 1, facet 1, current seed : %d clipped polygon vertex number : %d\n",host_test_index[20], host_test_index[88]);
+//	//printf("successfully running!\n");
+//
+//	ofstream fout("d.txt");
+//	//printf("test : %d current seed :%d  vertex number : %d\n",host_test_index[1], host_test_index[2], host_test_index[3]);
+//	//fout << "seed 185  nearest points" << endl;
+//	//for (int i = 0; i < 20; ++i)
+//	//{
+//	//	fout << host_test_index[i] << endl;
+//	//}
+//	////fout << "v1 : " << host_test_dis[0] << host_test_dis[1] << host_test_dis[2] << endl;
+//	////fout << "v2 : " << host_test_dis[0] << host_test_dis[1] << host_test_dis[2] << endl;
+//	////fout << "v2 : " << host_test_dis[0] << host_test_dis[1] << host_test_dis[2] << endl;
+//
+//	for (int i = 0; i < points_nb; ++i)
+//	{
+//		if (host_test_seeds[i * 4 + 3] != 0){
+//			host_test_seeds[i * 4 + 0] /= host_test_seeds[i * 4 + 3];
+//			host_test_seeds[i * 4 + 1] /= host_test_seeds[i * 4 + 3];
+//			host_test_seeds[i * 4 + 2] /= host_test_seeds[i * 4 + 3];
+//		}
+//		//printf("seeds %d : %.16lf, %.16lf, %.16lf, , %.16lf \n", i, host_test_seeds[i * 4 + 0]
+//			//, host_test_seeds[i * 4 + 1], host_test_seeds[i * 4 + 2], host_test_seeds[i * 4 + 3]);
+//		
+//		fout << i << ':' << setprecision(16) <<host_test_seeds[i * 4 + 0] << ' ' << host_test_seeds[i * 4 + 1] << ' ' << host_test_seeds[i * 4 + 2] << ' ' << host_test_seeds[i * 4 + 3] << endl;
+//	}
+//	/*for (int i = 0; i < points_nb; ++i)
+//	{
+//		fout << i << ':' << host_test_polygon[i] << endl;
+//	}*/
+//}
 
 extern "C" void runRVD(double* host_seeds_pointer, double* host_mesh_vertex_pointer,
 	int* host_facet_index, int points_nb, int mesh_vertex_nb, int mesh_facet_nb,
@@ -858,7 +804,12 @@ extern "C" void runRVD(double* host_seeds_pointer, double* host_mesh_vertex_poin
 
 	int threads = 512;
 	int blocks = mesh_facet_nb / threads + ((mesh_facet_nb % threads) ? 1 : 0);
-
+	
+	cudaEvent_t start, stop;
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	float elapsed_time;
+	cudaEventRecord(start, 0);
 	compute_RVD_with_knn << <threads, blocks >> >(dev_seeds_pointer, points_nb, dev_mesh_vertex_pointer, mesh_vertex_nb, dev_mesh_facet_index, mesh_facet_nb, dev_facet_center_neighbors,
 		dev_seeds_neighbors, 10, ret_seeds, test_seeds);
 
@@ -868,22 +819,27 @@ extern "C" void runRVD(double* host_seeds_pointer, double* host_mesh_vertex_poin
 
 	CheckCUDAError("pass data back to CPU");
 	
-	for (int i = 0; i < points_nb; ++i)
-	{
-		if (fabs(host_seedsInfo[i * 4 + 3]) >= 1e-12){
-			host_seedsInfo[i * 4 + 0] /= host_seedsInfo[i * 4 + 3];
-			host_seedsInfo[i * 4 + 1] /= host_seedsInfo[i * 4 + 3];
-			host_seedsInfo[i * 4 + 2] /= host_seedsInfo[i * 4 + 3];
-		}
-	}
-	std::ofstream fileout("eight_2.txt");
-	for (int i = 0; i < points_nb ; ++i)
-	{
-		//printf("Line %d : x : %.17lf, y : %.17lf, z : %.17lf, w : %.17lf\n", i, host_seedsInfo[i * 4 + 0], host_seedsInfo[i * 4 + 1], host_seedsInfo[i * 4 + 2], host_seedsInfo[i * 4 + 3]);
-		fileout << "Line " << i << ':' << setprecision(16) << host_seedsInfo[i * 4 + 0] << ' ' << host_seedsInfo[i * 4 + 1] << ' ' << host_seedsInfo[i * 4 + 2] << ' ' << host_seedsInfo[i * 4 + 3] << endl;
-		//fileout << "Points " << i << ':' << host_seedsInfo[i] << endl;
-		//seeds_polygon_nb[i] = host_seedsInfo[i];
-	}
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&elapsed_time, start, stop);
+	printf("Compute RVD time: %lfms\n", elapsed_time);
+	getchar();
+	//for (int i = 0; i < points_nb; ++i)
+	//{
+	//	if (fabs(host_seedsInfo[i * 4 + 3]) >= 1e-12){
+	//		host_seedsInfo[i * 4 + 0] /= host_seedsInfo[i * 4 + 3];
+	//		host_seedsInfo[i * 4 + 1] /= host_seedsInfo[i * 4 + 3];
+	//		host_seedsInfo[i * 4 + 2] /= host_seedsInfo[i * 4 + 3];
+	//	}
+	//}
+	//std::ofstream fileout("S2new.txt");
+	//for (int i = 0; i < points_nb ; ++i)
+	//{
+	//	//printf("Line %d : x : %.17lf, y : %.17lf, z : %.17lf, w : %.17lf\n", i, host_seedsInfo[i * 4 + 0], host_seedsInfo[i * 4 + 1], host_seedsInfo[i * 4 + 2], host_seedsInfo[i * 4 + 3]);
+	//	fileout << "Line " << i << ':' << setprecision(16) << host_seedsInfo[i * 4 + 0] << ' ' << host_seedsInfo[i * 4 + 1] << ' ' << host_seedsInfo[i * 4 + 2] << ' ' << host_seedsInfo[i * 4 + 3] << endl;
+	//	//fileout << "Points " << i << ':' << host_seedsInfo[i] << endl;
+	//	//seeds_polygon_nb[i] = host_seedsInfo[i];
+	//}
 	
 	free(host_seedsInfo);
 	cudaFree(dev_seeds_pointer);
