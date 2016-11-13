@@ -282,7 +282,7 @@ void action(const Cuda_Polygon polygon, int current_seed)
 		centriodTimesWeight = { 0.0, 0.0, 0.0 };
 	}
 
-	atomicAdd(&SeedsPolygon_nb[current_seed], 1);
+	//atomicAdd(&SeedsPolygon_nb[current_seed], 1);
 	if (triangle_nb > 0){
 
 		current_weight /= triangle_nb;
@@ -355,14 +355,6 @@ int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_
 	current_polygon.vertex[1].x = v2.x; current_polygon.vertex[1].y = v2.y; current_polygon.vertex[1].z = v2.z; current_polygon.vertex[1].w = 1.0;
 	current_polygon.vertex[2].x = v3.x; current_polygon.vertex[2].y = v3.y; current_polygon.vertex[2].z = v3.z; current_polygon.vertex[2].w = 1.0;
 	
-	/*if (tid == 0)
-	{
-		ret_seeds[0] = current_polygon.vertex[0].x;
-		ret_seeds[1] = current_polygon.vertex[0].y;
-		ret_seeds[2] = current_polygon.vertex[0].z;
-		ret_seeds[3] = current_polygon.vertex[0].w;
-		ret_seeds[4] = current_polygon.vertex[0].neigh_s;
-	}*/
 	
 	//doesn't have the stack?
 	int to_visit[CUDA_Stack_size];
@@ -414,10 +406,10 @@ int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_
 
 	//__syncthreads();
 	
-	//for (int i = 0; i < seeds_nb * 4; ++i)
-	//{
-	//	ret_seeds[i] = SeedsInformation[i];
-	//}
+	for (int i = 0; i < seeds_nb * 4; ++i)
+	{
+		ret_seeds[i] = SeedsInformation[i];
+	}
 	//for (int i = 0; i < seeds_nb; ++i)
 	//{
 	//	ret_seeds[i] = SeedsPolygon_nb[i];
@@ -811,7 +803,7 @@ extern "C" void runRVD(double* host_seeds_pointer, double* host_mesh_vertex_poin
 	float elapsed_time;
 	cudaEventRecord(start, 0);
 	compute_RVD_with_knn << <threads, blocks >> >(dev_seeds_pointer, points_nb, dev_mesh_vertex_pointer, mesh_vertex_nb, dev_mesh_facet_index, mesh_facet_nb, dev_facet_center_neighbors,
-		dev_seeds_neighbors, 10, ret_seeds, test_seeds);
+		dev_seeds_neighbors, 20, ret_seeds, test_seeds);
 
 	CheckCUDAError("kenerl function");
 	
@@ -823,7 +815,7 @@ extern "C" void runRVD(double* host_seeds_pointer, double* host_mesh_vertex_poin
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(&elapsed_time, start, stop);
 	printf("Compute RVD time: %lfms\n", elapsed_time);
-	getchar();
+	
 	//for (int i = 0; i < points_nb; ++i)
 	//{
 	//	if (fabs(host_seedsInfo[i * 4 + 3]) >= 1e-12){
@@ -847,6 +839,7 @@ extern "C" void runRVD(double* host_seeds_pointer, double* host_mesh_vertex_poin
 	cudaFree(dev_mesh_facet_index);
 	cudaFree(dev_seedsInformation);
 	cudaFree(ret_seeds);
+	cudaFree(test_seeds);
 	cudaFree(dev_facet_center_neighbors);
 	cudaFree(dev_seeds_neighbors);
 
