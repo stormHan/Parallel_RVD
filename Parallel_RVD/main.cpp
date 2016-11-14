@@ -64,7 +64,7 @@ extern "C" void runRVD(double* host_seeds_pointer, double* host_mesh_vertex_poin
 	call the knn cuda
 */
 
-extern "C" void runKnnCuda(Points r, Points queries, std::vector<int> indexes);
+extern "C" void runKnnCuda(Points r, Points queries, int* indexes);
 /*
 	renderring part
 */
@@ -190,25 +190,26 @@ int main(int argc, char** argv)
 	printf("knn1 time : %lfms\n", (double)(clock() - _kkt));
 	GPU_tree.Search(M_in, facet_neighbors_indexes, facet_neighbors_dists);
 	printf("knn1 time : %lfms\n", (double)(clock() - _kkt));
-	GPU_tree.Search_knn(data, seeds_neighbors_indexes, seeds_neighbors_dists, 10);
+	//GPU_tree.Search_knn(data, seeds_neighbors_indexes, seeds_neighbors_dists, 10);
 
-	printf("knn1 time : %lfms\n", (double)(clock() - _kkt));
+	//printf("knn1 time : %lfms\n", (double)(clock() - _kkt));
 
+	long _kdtree_time = clock();
+	seeds_neighbors_indexes.resize(20 * points.getPointsNumber());
+	int* ind = (int*)malloc(20 * points.getPointsNumber() * sizeof(int));
+	runKnnCuda(points, points, ind);
 	for (int i = 0; i < seeds_neighbors_indexes.size(); ++i)
-	{
-		if (seeds_neighbors_indexes[i] = 12345678)
-			printf("seed %d error", i / 20);
-	}
-	//long _kdtree_time = clock();
-	//runKnnCuda(points, points, seeds_neighbors_indexes);
-	//printf("Search kdtree time : %lfms\n", (double)(clock() - _kdtree_time));
-	//printf("vincent kdtree time : %lfms\n", (double)(clock() - _kdtree_time));
+		seeds_neighbors_indexes[i] = ind[i]-1;
+	free(ind);
+	printf("vincent kdtree time : %lfms\n", (double)(clock() - _kdtree_time));
 	
 	//freopen("out1", "w", stdout);
 	long ti = clock();
 	runRVD(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
 		M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber(), facet_neighbors_indexes, seeds_neighbors_indexes, seeds_polygon_nb);
 	printf("RVD time : %lfms\n", (double)(clock() - ti));
+
+
 
 #else
 
