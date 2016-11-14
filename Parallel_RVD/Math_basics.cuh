@@ -10,7 +10,34 @@ __device__ double computeDistance(double3 p1, double3 p2)
 		+ (p1.z - p2.z) * (p1.z - p2.z));
 }
 
+__device__
+inline double sqr_d(double x)
+{
+	return x * x;
+}
 
+__device__ 
+inline double distance2(double3 p1, double3 p2)
+{
+	return sqr_d(p2.x - p1.x)
+		+ sqr_d(p2.y - p1.y) + sqr_d(p2.z - p1.z);
+}
+__device__
+inline double distance2(double* p1, double* p2, int dim)
+{
+	double result = 0.0;
+	for (int i = 0; i < dim; ++i)
+	{
+		result += sqr_d(p2[i] - p1[i]);
+	}
+	return result;
+}
+
+__device__
+inline double maxd(double d1, double d2)
+{
+	return (d1 > d2) ? d1 : d2;
+}
 
 __device__
 double3 add(double3 a, double3 b)
