@@ -236,8 +236,62 @@ void intersection_clip_facet_with_knn(Cuda_Polygon& current_polygon , int curren
 	return;
 }
 
+/*
+*/
+__device__
+void intersection_clip_facet_SR(Cuda_Polygon& current_polygon, int current_seed, double* seeds_pointer, int seeds_nb, int *seeds_neighbor_index, int k)
+{
+	//set a buffer pointer to store the polygon
+	//Cuda_Polygon polygon_buffer;
+	//for (int i = 0; i < k; ++i)
+	//{
+	//	int j = seeds_neighbor_index[current_seed * k + i];
+	//	if (j == current_seed) return;
 
+	//	double dij = distance2(&seeds_pointer[current_seed * 3], &seeds_pointer[j * 3], 3);
+	//	double R2 = 0.0;
+	//	double3 pi = { seeds_pointer[current_seed * 3 + 0], seeds_pointer[current_seed * 3 + 1], seeds_pointer[current_seed * 3 + 2] };
+	//	for (int ii = 0; ii < current_polygon.vertex_nb; ++ii)
+	//	{
+	//		double3 pk = { current_polygon.vertex[ii].x, current_polygon.vertex[ii].y, current_polygon.vertex[ii].z };
+	//		double dik = distance2(pi, pk);
+	//		R2 = max(R2, dik);
+	//	}
+	//	if (dij > 4.1 * R2)
+	//	{
+	//		//return;
+	//	}
+	//	clip_by_plane(current_polygon, polygon_buffer, current_seed, j, seeds_pointer, seeds_nb);
+	//	swap_polygons(current_polygon, polygon_buffer);
+	//}
 
+	Cuda_Polygon polygon_buffer;
+
+	for (int i = 0; i < k; ++i)
+	{
+		int j = seeds_neighbor_index[current_seed * k + i];
+		if (current_seed != j)
+		{
+			double dij = distance2(&seeds_pointer[current_seed * 3], &seeds_pointer[j * 3], 3);
+			double R2 = 0.0;
+			double3 pi = { seeds_pointer[current_seed * 3 + 0], seeds_pointer[current_seed * 3 + 1], seeds_pointer[current_seed * 3 + 2] };
+			for (int ii = 0; ii < current_polygon.vertex_nb; ++ii)
+			{
+				double3 pk = { current_polygon.vertex[ii].x, current_polygon.vertex[ii].y, current_polygon.vertex[ii].z };
+				double dik = distance2(pi, pk);
+				R2 = max(R2, dik);
+			}
+			if (dij > 4.1 * R2)
+			{
+				return;
+			}
+
+			clip_by_plane(current_polygon, polygon_buffer, current_seed, j, seeds_pointer, seeds_nb);
+			swap_polygons(current_polygon, polygon_buffer);
+		}
+	}
+	return;
+}
 
 __device__
 void action(const Cuda_Polygon polygon, int current_seed)
@@ -370,7 +424,7 @@ int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_
 		int current_seed = to_visit[to_visit_pos - 1];
 		to_visit_pos--;
 
-		intersection_clip_facet_with_knn(current_polygon, current_seed, seeds_pointer, seeds_nb, seeds_neighbor_index, k);
+		intersection_clip_facet_SR(current_polygon, current_seed, seeds_pointer, seeds_nb, seeds_neighbor_index, k);
 		
 		//use the RVD
 		//action(current_polygon, current_seed);
@@ -406,10 +460,10 @@ int* facet_center_neighbor_index, int* seeds_neighbor_index, int k, double* ret_
 
 	//__syncthreads();
 	
-	for (int i = 0; i < seeds_nb * 4; ++i)
+	/*for (int i = 0; i < seeds_nb * 4; ++i)
 	{
 		ret_seeds[i] = SeedsInformation[i];
-	}
+	}*/
 	//for (int i = 0; i < seeds_nb; ++i)
 	//{
 	//	ret_seeds[i] = SeedsPolygon_nb[i];
