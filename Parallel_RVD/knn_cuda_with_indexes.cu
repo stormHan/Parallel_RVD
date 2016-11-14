@@ -521,8 +521,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]){
 /**
 * Example of use of kNN search CUDA.
 */
-extern "C" void  runKnnCuda(Points r, Points queries, std::vector<int>& indexes){
-	
+extern "C" void  runKnnCuda(Points r, Points queries, int* indexes){
+
 	// Variables and parameters
 	float* ref;											// Pointer to reference point array
 	float* query;										// Pointer to query point array
@@ -531,17 +531,17 @@ extern "C" void  runKnnCuda(Points r, Points queries, std::vector<int>& indexes)
 	int    ref_nb = r.getPointsNumber();;				// Reference point number, max=65535
 	int    query_nb = queries.getPointsNumber();		// Query point number,     max=65535
 	int    dim = 3;										// Dimension of points
-	int    k = 10;										// Nearest neighbors to consider
+	int    k = 20;										// Nearest neighbors to consider
 	int    iterations = 1;
 	int    i;
-
+	
 	// Memory allocation
 	ref = (float *)malloc(ref_nb   * dim * sizeof(float));
 	query = (float *)malloc(query_nb * dim * sizeof(float));
 	dist = (float *)malloc(query_nb * k * sizeof(float));
 	ind = (int *)malloc(query_nb * k * sizeof(float));
 	
-	//indexes.resize(query_nb * k);
+
 	// Init 
 	srand(time(NULL));
 	for (i = 0; i < ref_nb; i++){
@@ -555,7 +555,7 @@ extern "C" void  runKnnCuda(Points r, Points queries, std::vector<int>& indexes)
 		query[i + query_nb] = (float)queries.getPoint(i).y;
 		query[i + (2 * query_nb)] = (float)queries.getPoint(i).z;
 	}
-	
+
 	// Variables for duration evaluation
 	cudaEvent_t start, stop;
 	cudaEventCreate(&start);
@@ -573,12 +573,19 @@ extern "C" void  runKnnCuda(Points r, Points queries, std::vector<int>& indexes)
 	cudaEventRecord(start, 0);
 	
 	knn(ref, ref_nb, query, query_nb, dim, k, dist, ind);
-
+	
 	cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop);
 	cudaEventElapsedTime(&elapsed_time, start, stop);
 	printf("Vincent Knn done in %f s for %d iterations (%f s by iteration)\n", elapsed_time / 1000, iterations, elapsed_time / (iterations * 1000));
 	
+	for (int i = 0; i < query_nb; ++i)
+	{
+		for (int j = 0; j < k; ++j)
+		{ 
+			indexes[i * k + j] = ind[j * query_nb+ i];
+		}
+	}
 	
 	// Destroy cuda event object and free memory
 	cudaEventDestroy(start);
