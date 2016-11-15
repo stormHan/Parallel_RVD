@@ -199,8 +199,8 @@ namespace P_RVD{
 				//Now we get enough neighbors in cur node
 				//int *temp_index = (int*)malloc(sizeof(int) * nodes[cur].num_indexes);
 				//double *temp_dists = (double*)malloc(sizeof(double) * nodes[cur].num_indexes);
-				int temp_index[20];
-				double temp_dists[20];
+				int temp_index[50];
+				double temp_dists[50];
 				
 				for (int i = 0; i < nodes[cur].num_indexes; ++i)
 				{
@@ -209,6 +209,7 @@ namespace P_RVD{
 				}
 				
 				int n = nodes[cur].num_indexes;
+
 				//利用k次冒泡得到前小的距离
 				int best_idx = 0;
 				double best_dist = FLT_MAX;
@@ -327,32 +328,32 @@ namespace P_RVD{
 		int* k_idx = (int*)malloc(sizeof(int) * k);
 		double* k_dist = (double*)malloc(sizeof(double) * k);
 		double radius = 0;
-
+		
 		SearchAtNode_knn(nodes, indexes, pts, 0 /* root */, query, k_idx, k_dist, &best_node, k);
 
 		radius = sqrt(k_dist[k - 1]);
 
 		//Now find other posiible candidates
-		int cur = best_node;
+		//int cur = best_node;
 
-		while (nodes[cur].parent != -1)
-		{
-			int parent = nodes[cur].parent;
-			int split_axis = nodes[parent].level % KDTREE_DIM;
+		//while (nodes[cur].parent != -1)
+		//{
+		//	int parent = nodes[cur].parent;
+		//	int split_axis = nodes[parent].level % KDTREE_DIM;
 
-			//Search the other node
+		//	//Search the other node
 
-			if (fabs(nodes[parent].split_value - query.coords[split_axis]) <= radius)
-			{
-				
-				if (nodes[parent].left != cur)
-					SearchAtiNodeRange_knn(nodes, indexes, pts, query, nodes[parent].left, radius, k_idx, k_dist, k);
-				else
-					SearchAtiNodeRange_knn(nodes, indexes, pts, query, nodes[parent].right, radius, k_idx, k_dist, k);
-					
-			}
-			cur = parent;
-		}
+		//	if (fabs(nodes[parent].split_value - query.coords[split_axis]) <= radius)
+		//	{
+		//		
+		//		if (nodes[parent].left != cur)
+		//			SearchAtiNodeRange_knn(nodes, indexes, pts, query, nodes[parent].left, radius, k_idx, k_dist, k);
+		//		else
+		//			SearchAtiNodeRange_knn(nodes, indexes, pts, query, nodes[parent].right, radius, k_idx, k_dist, k);
+		//			
+		//	}
+		//	cur = parent;
+		//}
 
 		for (int i = 0; i < k; ++i)
 		{
