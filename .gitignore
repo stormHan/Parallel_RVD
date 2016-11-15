@@ -252,3 +252,4 @@ paket-files/
 .idea/
 *.sln.iml
 RVD_cpu_version/RVD_cpu_version.vcxproj.filters
+Parallel_RVD/test_data/d.txt
