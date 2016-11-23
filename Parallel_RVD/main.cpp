@@ -22,6 +22,7 @@
 //kdtree
 #include "Kdtree.h"
 #include "CUDA_KDtree.h"
+#include "AnnKdtree.h"
 
 // in/out put
 #include <iostream>
@@ -161,7 +162,26 @@ int main(int argc, char** argv)
 
 	std::vector<int> seeds_polygon_nb;
 #ifdef  KNN
-	
+	std::vector<int> facet_neighbors_indexes, seeds_neighbors_indexes;
+	std::vector<double> facet_neighbors_dists, seeds_neighbors_dists;
+	//--------------Ann part------------------
+	int points_nb = points.getPointsNumber();
+	m_AnnKdtree Annkdtree(host_points, points_nb);
+
+	//freopen("AnnPointsSearch.txt", "w", stdout);
+	long annt = clock();
+	for (int i = 0; i < points_nb; ++i){
+		std::vector<int> ind;
+		Annkdtree.queryNearestNeighbors(points.getPoint(i), 20, ind);
+		//printf("point %d : ", i);
+		//for (int j = 0; j < 20; ++j)
+		//{
+		//	printf(" %d ", ind[j]);
+		//}
+		//printf("\n");
+	}
+	printf("CPU ANN TIME : %.17lfms\n", (double)(clock() - annt));
+	getchar();
 	/*
 	ÉèÖÃKdtree
 	Create the tree
@@ -178,11 +198,6 @@ int main(int argc, char** argv)
 		data[i].coords[1] = temp.y;
 		data[i].coords[2] = temp.z;
 	}
-
-	std::vector<int> facet_neighbors_indexes, seeds_neighbors_indexes;
-	std::vector<double> facet_neighbors_dists, seeds_neighbors_dists;
-
-
 
 	long _kkt = clock();
 	tree.Create_kdtree(data, maxTreeLevel);
