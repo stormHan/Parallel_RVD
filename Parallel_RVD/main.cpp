@@ -165,23 +165,23 @@ int main(int argc, char** argv)
 	std::vector<int> facet_neighbors_indexes, seeds_neighbors_indexes;
 	std::vector<double> facet_neighbors_dists, seeds_neighbors_dists;
 	//--------------Ann part------------------
-	int points_nb = points.getPointsNumber();
-	m_AnnKdtree Annkdtree(host_points, points_nb);
+	//int points_nb = points.getPointsNumber();
+	//m_AnnKdtree Annkdtree(host_points, points_nb);
 
-	//freopen("AnnPointsSearch.txt", "w", stdout);
-	long annt = clock();
-	for (int i = 0; i < points_nb; ++i){
-		std::vector<int> ind;
-		Annkdtree.queryNearestNeighbors(points.getPoint(i), 20, ind);
-		//printf("point %d : ", i);
-		//for (int j = 0; j < 20; ++j)
-		//{
-		//	printf(" %d ", ind[j]);
-		//}
-		//printf("\n");
-	}
-	printf("CPU ANN TIME : %.17lfms\n", (double)(clock() - annt));
-	getchar();
+	////freopen("AnnPointsSearch.txt", "w", stdout);
+	//long annt = clock();
+	//for (int i = 0; i < points_nb; ++i){
+	//	std::vector<int> ind;
+	//	Annkdtree.queryNearestNeighbors(points.getPoint(i), 20, ind);
+	//	//printf("point %d : ", i);
+	//	//for (int j = 0; j < 20; ++j)
+	//	//{
+	//	//	printf(" %d ", ind[j]);
+	//	//}
+	//	//printf("\n");
+	//}
+	//printf("CPU ANN TIME : %.17lfms\n", (double)(clock() - annt));
+	//getchar();
 	/*
 	ÉèÖÃKdtree
 	Create the tree
@@ -209,16 +209,26 @@ int main(int argc, char** argv)
 
 	//printf("knn1 time : %lfms\n", (double)(clock() - _kkt));
 
-	long _kdtree_time = clock();
+	//long _kdtree_time = clock();
 	seeds_neighbors_indexes.resize(20 * points.getPointsNumber());
 	int* ind = (int*)malloc(20 * points.getPointsNumber() * sizeof(int));
 	runKnnCuda(points, points, ind);
 	for (int i = 0; i < seeds_neighbors_indexes.size(); ++i)
 		seeds_neighbors_indexes[i] = ind[i]-1;
 	free(ind);
-	printf("vincent kdtree time : %lfms\n", (double)(clock() - _kdtree_time));
+	//printf("vincent kdtree time : %lfms\n", (double)(clock() - _kdtree_time));
 	
 	//freopen("out1", "w", stdout);
+
+	//freopen("..//test//S2_points.txt", "r", stdin);
+	//for (int t = 0; t < points.getPointsNumber() * 20; ++t){
+	//	scanf("%d ", &seeds_neighbors_indexes[t]);
+	//}
+	//freopen("..//test//S2_facets.txt", "r", stdin);
+	//for (int t = 0; t < M_in.meshFacets.getFacetsNumber(); ++t){
+	//	scanf("%d ", &facet_neighbors_indexes[t]);
+	//}
+
 	long ti = clock();
 	runRVD(host_points, host_mesh_vertex, host_facet_index, points.getPointsNumber(),
 		M_in.meshVertices.getPointNumber(), M_in.meshFacets.getFacetsNumber(), facet_neighbors_indexes, seeds_neighbors_indexes, seeds_polygon_nb);
