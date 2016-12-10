@@ -120,9 +120,11 @@ namespace P_RVD
 				*/
 				current_polygon = intersect_cell_facet(current_seed, F);
 
-				if (current_polygon->getVertex_nb() == 0)
+				if (current_polygon->getVertex_nb() == 0){
+					ffaa << std::endl;
 					break;
-
+				}
+				ffaa << current_seed << " ";
 				//muniplate the current polygon 
 				polygonHandler->clear();
 				polygonHandler->setPolygon(current_polygon);
